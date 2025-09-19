@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClimateSync Live Weather</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="background-animation">
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div class="cloud cloud3"></div>
+    <div class="rain-container">
+      <div class="rain"></div>
+      <div class="rain"></div>
+      <div class="rain"></div>
+      <div class="rain"></div>
+      <div class="rain"></div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Header Section -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <i class="fas fa-cloud-sun weather-icon"></i>
+          <h1 class="title">
+            <span class="climate">Climate</span><span class="sync">Sync</span>
+            <span class="subtitle">Live Weather Dashboard</span>
+          </h1>
+        </div>
+        <div class="live-indicator">
+          <span class="pulse-dot"></span>
+          <span class="live-text">LIVE</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls Section -->
+    <section class="controls-section">
+      <div class="controls-container">
+        <div class="select-wrapper">
+          <i class="fas fa-map-marker-alt location-icon"></i>
+          <select id="citySelect" class="city-select">
+            <option value="Delhi">Delhi, Delhi</option>
+            <option value="Mumbai">Mumbai, Maharashtra</option>
+            <option value="Chennai">Chennai, Tamil Nadu</option>
+            <!-- More cities loaded dynamically -->
+          </select>
+          <i class="fas fa-chevron-down dropdown-icon"></i>
+        </div>
+        <button id="refreshBtn" class="refresh-btn" onclick="refreshWeather()">
+          <i class="fas fa-sync-alt"></i>
+          <span>Refresh</span>
+        </button>
+        <a href="farming.html" class="farming-link">
+          <i class="fas fa-tractor"></i>
+          <span>Farming Dashboard</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- City Info Section -->
+    <section class="city-info-section" id="cityInfo" style="display: none;">
+      <div class="city-card">
+        <div class="city-header">
+          <h2 id="cityName" class="city-name">City Name</h2>
+          <div class="city-meta">
+            <span id="cityDetails" class="city-details">State • Region • Population</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Weather Cards Section -->
+    <section class="weather-section">
+      <div class="weather-grid">
+        <!-- Temperature Card -->
+        <div class="weather-card temperature-card">
+          <div class="card-header">
+            <i class="fas fa-thermometer-half card-icon"></i>
+            <h3 class="card-title">Temperature</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="temp">--°C</div>
+            <div class="card-subtitle">Current Temperature</div>
+          </div>
+          <div class="card-decoration">
+            <div class="gradient-circle"></div>
+          </div>
+        </div>
+
+        <!-- Humidity Card -->
+        <div class="weather-card humidity-card">
+          <div class="card-header">
+            <i class="fas fa-tint card-icon"></i>
+            <h3 class="card-title">Humidity</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="humidity">--%</div>
+            <div class="card-subtitle">Moisture Level</div>
+          </div>
+          <div class="progress-ring">
+            <svg class="progress-svg" width="80" height="80">
+              <circle class="progress-circle-bg" cx="40" cy="40" r="35"></circle>
+              <circle class="progress-circle" cx="40" cy="40" r="35" id="humidityProgress"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Rainfall Card -->
+        <div class="weather-card rainfall-card">
+          <div class="card-header">
+            <i class="fas fa-cloud-rain card-icon"></i>
+            <h3 class="card-title">Rainfall</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="rain">-- mm</div>
+            <div class="card-subtitle">Last Hour</div>
+          </div>
+          <div class="rain-animation">
+            <div class="raindrop"></div>
+            <div class="raindrop"></div>
+            <div class="raindrop"></div>
+          </div>
+        </div>
+
+        <!-- Description Card -->
+        <div class="weather-card description-card">
+          <div class="card-header">
+            <i class="fas fa-eye card-icon"></i>
+            <h3 class="card-title">Conditions</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value description-text" id="desc">--</div>
+            <div class="card-subtitle">Weather Description</div>
+          </div>
+          <div class="weather-icon-display">
+            <i class="fas fa-sun weather-display-icon" id="weatherIcon"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data Info Section -->
+    <section class="data-info-section">
+      <div class="data-info-card" id="dataInfo">
+        <div class="info-row">
+          <i class="fas fa-database info-icon"></i>
+          <span id="dataSource" class="info-text">Loading...</span>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-clock info-icon"></i>
+          <span id="lastUpdated" class="info-text">Last updated: --</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <p class="loading-text">Fetching Weather Data...</p>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

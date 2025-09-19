@@ -1,0 +1,279 @@
+{
+  "cities": [
+    {
+      "id": 1,
+      "name": "Delhi",
+      "state": "Delhi",
+      "imd_id": 42182,
+      "latitude": 28.6139,
+      "longitude": 77.2090,
+      "timezone": "Asia/Kolkata",
+      "population": 32900000,
+      "region": "North"
+    },
+    {
+      "id": 2,
+      "name": "Mumbai",
+      "state": "Maharashtra",
+      "imd_id": 43003,
+      "latitude": 19.0760,
+      "longitude": 72.8777,
+      "timezone": "Asia/Kolkata",
+      "population": 20700000,
+      "region": "West"
+    },
+    {
+      "id": 3,
+      "name": "Chennai",
+      "state": "Tamil Nadu",
+      "imd_id": 43279,
+      "latitude": 13.0827,
+      "longitude": 80.2707,
+      "timezone": "Asia/Kolkata",
+      "population": 11300000,
+      "region": "South"
+    },
+    {
+      "id": 4,
+      "name": "Bangalore",
+      "state": "Karnataka",
+      "imd_id": 43295,
+      "latitude": 12.9716,
+      "longitude": 77.5946,
+      "timezone": "Asia/Kolkata",
+      "population": 12800000,
+      "region": "South"
+    },
+    {
+      "id": 5,
+      "name": "Hyderabad",
+      "state": "Telangana",
+      "imd_id": 43128,
+      "latitude": 17.3850,
+      "longitude": 78.4867,
+      "timezone": "Asia/Kolkata",
+      "population": 10500000,
+      "region": "South"
+    },
+    {
+      "id": 6,
+      "name": "Kolkata",
+      "state": "West Bengal",
+      "imd_id": 42809,
+      "latitude": 22.5726,
+      "longitude": 88.3639,
+      "timezone": "Asia/Kolkata",
+      "population": 15700000,
+      "region": "East"
+    },
+    {
+      "id": 7,
+      "name": "Pune",
+      "state": "Maharashtra",
+      "imd_id": 43063,
+      "latitude": 18.5204,
+      "longitude": 73.8567,
+      "timezone": "Asia/Kolkata",
+      "population": 7400000,
+      "region": "West"
+    },
+    {
+      "id": 8,
+      "name": "Ahmedabad",
+      "state": "Gujarat",
+      "imd_id": 42647,
+      "latitude": 23.0225,
+      "longitude": 72.5714,
+      "timezone": "Asia/Kolkata",
+      "population": 8400000,
+      "region": "West"
+    },
+    {
+      "id": 9,
+      "name": "Jaipur",
+      "state": "Rajasthan",
+      "imd_id": 42348,
+      "latitude": 26.9124,
+      "longitude": 75.7873,
+      "timezone": "Asia/Kolkata",
+      "population": 3900000,
+      "region": "North"
+    },
+    {
+      "id": 10,
+      "name": "Lucknow",
+      "state": "Uttar Pradesh",
+      "imd_id": 42369,
+      "latitude": 26.8467,
+      "longitude": 80.9462,
+      "timezone": "Asia/Kolkata",
+      "population": 3400000,
+      "region": "North"
+    },
+    {
+      "id": 11,
+      "name": "Kanpur",
+      "state": "Uttar Pradesh",
+      "imd_id": 42361,
+      "latitude": 26.4499,
+      "longitude": 80.3319,
+      "timezone": "Asia/Kolkata",
+      "population": 3200000,
+      "region": "North"
+    },
+    {
+      "id": 12,
+      "name": "Nagpur",
+      "state": "Maharashtra",
+      "imd_id": 42867,
+      "latitude": 21.1458,
+      "longitude": 79.0882,
+      "timezone": "Asia/Kolkata",
+      "population": 2500000,
+      "region": "Central"
+    },
+    {
+      "id": 13,
+      "name": "Indore",
+      "state": "Madhya Pradesh",
+      "imd_id": 42667,
+      "latitude": 22.7196,
+      "longitude": 75.8577,
+      "timezone": "Asia/Kolkata",
+      "population": 2200000,
+      "region": "Central"
+    },
+    {
+      "id": 14,
+      "name": "Thane",
+      "state": "Maharashtra",
+      "imd_id": 43192,
+      "latitude": 19.2183,
+      "longitude": 72.9781,
+      "timezone": "Asia/Kolkata",
+      "population": 1900000,
+      "region": "West"
+    },
+    {
+      "id": 15,
+      "name": "Bhopal",
+      "state": "Madhya Pradesh",
+      "imd_id": 42667,
+      "latitude": 23.2599,
+      "longitude": 77.4126,
+      "timezone": "Asia/Kolkata",
+      "population": 1900000,
+      "region": "Central"
+    },
+    {
+      "id": 16,
+      "name": "Visakhapatnam",
+      "state": "Andhra Pradesh",
+      "imd_id": 43150,
+      "latitude": 17.6868,
+      "longitude": 83.2185,
+      "timezone": "Asia/Kolkata",
+      "population": 2000000,
+      "region": "South"
+    },
+    {
+      "id": 17,
+      "name": "Patna",
+      "state": "Bihar",
+      "imd_id": 42492,
+      "latitude": 25.5941,
+      "longitude": 85.1376,
+      "timezone": "Asia/Kolkata",
+      "population": 2000000,
+      "region": "East"
+    },
+    {
+      "id": 18,
+      "name": "Vadodara",
+      "state": "Gujarat",
+      "imd_id": 42809,
+      "latitude": 22.3072,
+      "longitude": 73.1812,
+      "timezone": "Asia/Kolkata",
+      "population": 1670000,
+      "region": "West"
+    },
+    {
+      "id": 19,
+      "name": "Ghaziabad",
+      "state": "Uttar Pradesh",
+      "imd_id": 42182,
+      "latitude": 28.6692,
+      "longitude": 77.4538,
+      "timezone": "Asia/Kolkata",
+      "population": 1650000,
+      "region": "North"
+    },
+    {
+      "id": 20,
+      "name": "Ludhiana",
+      "state": "Punjab",
+      "imd_id": 42101,
+      "latitude": 30.9010,
+      "longitude": 75.8573,
+      "timezone": "Asia/Kolkata",
+      "population": 1500000,
+      "region": "North"
+    },
+    {
+      "id": 21,
+      "name": "Agra",
+      "state": "Uttar Pradesh",
+      "imd_id": 42361,
+      "latitude": 27.1767,
+      "longitude": 78.0081,
+      "timezone": "Asia/Kolkata",
+      "population": 1400000,
+      "region": "North"
+    },
+    {
+      "id": 22,
+      "name": "Nashik",
+      "state": "Maharashtra",
+      "imd_id": 43041,
+      "latitude": 19.9975,
+      "longitude": 73.7898,
+      "timezone": "Asia/Kolkata",
+      "population": 1300000,
+      "region": "West"
+    },
+    {
+      "id": 23,
+      "name": "Faridabad",
+      "state": "Haryana",
+      "imd_id": 42182,
+      "latitude": 28.4089,
+      "longitude": 77.3178,
+      "timezone": "Asia/Kolkata",
+      "population": 1200000,
+      "region": "North"
+    },
+    {
+      "id": 24,
+      "name": "Meerut",
+      "state": "Uttar Pradesh",
+      "imd_id": 42182,
+      "latitude": 28.9845,
+      "longitude": 77.7064,
+      "timezone": "Asia/Kolkata",
+      "population": 1200000,
+      "region": "North"
+    },
+    {
+      "id": 25,
+      "name": "Rajkot",
+      "state": "Gujarat",
+      "imd_id": 42809,
+      "latitude": 22.3039,
+      "longitude": 70.8022,
+      "timezone": "Asia/Kolkata",
+      "population": 1200000,
+      "region": "West"
+    }
+  ]
+}

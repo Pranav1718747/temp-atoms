@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClimateSync - Farmer Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="farming.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navigation">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <i class="fas fa-seedling"></i>
+        <span>ClimateSync Farming</span>
+      </div>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">
+          <i class="fas fa-cloud-sun"></i>
+          Weather Dashboard
+        </a>
+        <a href="farming.html" class="nav-link active">
+          <i class="fas fa-tractor"></i>
+          Farming Dashboard
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container farming-container">
+    <!-- Header Section -->
+    <header class="farming-header">
+      <div class="header-content">
+        <div class="farming-title">
+          <h1>🌾 Smart Farming Dashboard</h1>
+          <p>Weather insights simplified for farmers</p>
+        </div>
+        <div class="season-indicator">
+          <span class="season-icon">🌱</span>
+          <span class="season-text" id="currentSeason">Loading...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls Section -->
+    <section class="farming-controls">
+      <div class="controls-grid">
+        <div class="control-group">
+          <label for="citySelect">📍 Select Your Location</label>
+          <select id="citySelect" class="farming-select">
+            <option value="Delhi">Delhi</option>
+            <option value="Mumbai">Mumbai</option>
+            <option value="Chennai">Chennai</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="cropSelect">🌾 Select Your Crop</label>
+          <select id="cropSelect" class="farming-select">
+            <option value="rice">Rice (धान)</option>
+            <option value="wheat">Wheat (गेहूं)</option>
+            <option value="cotton">Cotton (कपास)</option>
+            <option value="sugarcane">Sugarcane (गन्ना)</option>
+            <option value="tomato">Tomato (टमाटर)</option>
+            <option value="onion">Onion (प्याज)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="stageSelect">🌱 Growth Stage</label>
+          <select id="stageSelect" class="farming-select">
+            <option value="seedling">Seedling (बीज)</option>
+            <option value="vegetative">Growing (बढ़ना)</option>
+            <option value="flowering">Flowering (फूल)</option>
+            <option value="fruiting">Fruiting (फल)</option>
+            <option value="harvest">Harvest (कटाई)</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Weather Summary for Farmers -->
+    <section class="weather-summary">
+      <div class="weather-cards">
+        <div class="weather-card temperature-card">
+          <div class="card-icon">🌡️</div>
+          <div class="card-content">
+            <div class="card-value" id="temperature">--°C</div>
+            <div class="card-label">Temperature</div>
+            <div class="card-status" id="tempStatus">Checking...</div>
+            <div class="visual-indicator">
+              <div class="temperature-bar" id="tempBar">
+                <div class="temp-fill" id="tempFill"></div>
+                <div class="temp-marker ideal" id="tempIdeal">Ideal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="weather-card humidity-card">
+          <div class="card-icon">💧</div>
+          <div class="card-content">
+            <div class="card-value" id="humidity">--%</div>
+            <div class="card-label">Humidity</div>
+            <div class="card-status" id="humidityStatus">Checking...</div>
+            <div class="visual-indicator">
+              <div class="humidity-circle" id="humidityCircle">
+                <svg width="80" height="80">
+                  <circle cx="40" cy="40" r="35" fill="none" stroke="#e0e0e0" stroke-width="6"/>
+                  <circle cx="40" cy="40" r="35" fill="none" stroke="#2196f3" stroke-width="6" 
+                          stroke-dasharray="220" stroke-dashoffset="220" id="humidityProgress"
+                          transform="rotate(-90 40 40)"/>
+                </svg>
+                <div class="circle-text" id="humidityText">0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="weather-card rainfall-card">
+          <div class="card-icon">🌧️</div>
+          <div class="card-content">
+            <div class="card-value" id="rainfall">-- mm</div>
+            <div class="card-label">Rainfall</div>
+            <div class="card-status" id="rainfallStatus">Checking...</div>
+            <div class="visual-indicator">
+              <div class="rainfall-animation" id="rainfallAnimation">
+                <div class="rain-container">
+                  <div class="raindrop"></div>
+                  <div class="raindrop"></div>
+                  <div class="raindrop"></div>
+                  <div class="raindrop"></div>
+                  <div class="raindrop"></div>
+                </div>
+                <div class="water-level" id="waterLevel">
+                  <div class="water-fill" id="waterFill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Enhanced Weather Information Grid -->
+    <section class="enhanced-weather-section">
+      <h2>🌤️ Comprehensive Weather Information</h2>
+      
+      <div class="enhanced-weather-grid">
+        <!-- Atmospheric Pressure -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #2196f3, #1976d2);">🌡️</div>
+            <h3 class="weather-card-title">Atmospheric Pressure</h3>
+          </div>
+          <div class="pressure-gauge">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" class="gauge-bg"></circle>
+              <circle cx="50" cy="50" r="40" class="gauge-fill" id="pressureGauge"
+                      stroke-dasharray="0 251" stroke-dashoffset="0"></circle>
+            </svg>
+            <div class="pressure-value">
+              <div class="value" id="pressureValue">--</div>
+              <div class="unit">hPa</div>
+            </div>
+          </div>
+          <div class="pressure-trend" id="pressureTrend">
+            <span id="pressureTrendIcon">📊</span>
+            <span id="pressureTrendText">Checking...</span>
+          </div>
+        </div>
+
+        <!-- Wind Information with Compass -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #00bcd4, #0097a7);">💨</div>
+            <h3 class="weather-card-title">Wind Conditions</h3>
+          </div>
+          <div class="wind-compass" id="windCompass">
+            <div class="compass-directions">
+              <span class="north">N</span>
+              <span class="east">E</span>
+              <span class="south">S</span>
+              <span class="west">W</span>
+            </div>
+            <div class="wind-arrow" id="windArrow"></div>
+          </div>
+          <div class="wind-info">
+            <div class="wind-speed" id="windSpeed">-- km/h</div>
+            <div class="wind-direction" id="windDirectionText">--</div>
+          </div>
+        </div>
+
+        <!-- UV Index Meter -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #ff9800, #f57c00);">☀️</div>
+            <h3 class="weather-card-title">UV Index</h3>
+          </div>
+          <div class="uv-meter">
+            <div class="uv-value" id="uvValue">--</div>
+            <div class="uv-scale">
+              <div class="uv-indicator" id="uvIndicator"></div>
+            </div>
+            <div class="uv-level" id="uvLevel">Checking...</div>
+          </div>
+        </div>
+
+        <!-- Air Quality Index -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">🌫️</div>
+            <h3 class="weather-card-title">Air Quality</h3>
+          </div>
+          <div class="air-quality-indicator">
+            <div class="aqi-circle">
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="35" class="aqi-bg"></circle>
+                <circle cx="50" cy="50" r="35" class="aqi-fill" id="aqiCircle"
+                        stroke-dasharray="0 220" stroke-dashoffset="0"></circle>
+              </svg>
+              <div class="aqi-value">
+                <div class="value" id="aqiValue">--</div>
+                <div class="label">AQI</div>
+              </div>
+            </div>
+            <div class="aqi-status" id="aqiStatus">Checking...</div>
+          </div>
+        </div>
+
+        <!-- Soil Conditions -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #795548, #5d4037);">🌱</div>
+            <h3 class="weather-card-title">Soil Conditions</h3>
+          </div>
+          <div class="soil-conditions">
+            <div class="soil-metric">
+              <div class="label">Temperature</div>
+              <div class="value" id="soilTemp">--</div>
+              <div class="unit">°C</div>
+              <div class="soil-temp-bar">
+                <div class="soil-temp-fill" id="soilTempBar"></div>
+              </div>
+            </div>
+            <div class="soil-metric">
+              <div class="label">Moisture</div>
+              <div class="value" id="soilMoisture">--</div>
+              <div class="unit">%</div>
+              <div class="soil-moisture-circle">
+                <svg viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="25" class="moisture-bg"></circle>
+                  <circle cx="30" cy="30" r="25" class="moisture-fill" id="soilMoistureCircle"
+                          stroke-dasharray="0 157" stroke-dashoffset="0"></circle>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Growing Degree Days -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #7cb342, #558b2f);">📈</div>
+            <h3 class="weather-card-title">Growing Degree Days</h3>
+          </div>
+          <div class="gdd-display">
+            <div class="gdd-value" id="gddValue">--</div>
+            <div class="gdd-label">Today's GDD</div>
+            <div class="gdd-progress">
+              <div class="gdd-progress-fill" id="gddProgress"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Heat Index -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #f44336, #d32f2f);">🔥</div>
+            <h3 class="weather-card-title">Heat Index</h3>
+          </div>
+          <div class="heat-index-display">
+            <div class="heat-index-value" id="heatIndexValue">--°C</div>
+            <div class="heat-index-level" id="heatIndexLevel">Checking...</div>
+          </div>
+        </div>
+
+        <!-- Moon Phase -->
+        <div class="enhanced-weather-card">
+          <div class="weather-card-header">
+            <div class="weather-card-icon" style="background: linear-gradient(135deg, #607d8b, #455a64);">🌙</div>
+            <h3 class="weather-card-title">Moon Phase</h3>
+          </div>
+          <div class="moon-phase-display">
+            <span class="moon-icon" id="moonIcon">🌙</span>
+            <div class="moon-phase-name" id="moonPhaseName">--</div>
+            <div class="moon-illumination" id="moonIllumination">-- % visible</div>
+          </div>
+        </div>
+      </div>
+    </section>
+      
+      <!-- Weather Chart -->
+      <div class="weather-chart-container">
+        <div class="chart-card">
+          <h3>📊 Daily Weather Pattern</h3>
+          <div class="chart-area" id="weatherChart">
+            <canvas id="weatherCanvas" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comprehensive Weather Scene -->
+      <div class="comprehensive-weather-scene">
+        <!-- Main Weather Scene -->
+        <div class="main-weather-scene">
+          <div class="scene-container" id="weatherScene">
+            <div class="sun" id="sunElement"></div>
+            <div class="clouds" id="cloudsElement">
+              <div class="cloud cloud1"></div>
+              <div class="cloud cloud2"></div>
+            </div>
+            <div class="precipitation" id="precipitationElement">
+              <!-- Dynamic precipitation will be added here -->
+            </div>
+            <div class="weather-overlay-info">
+              <div class="scene-temp" id="sceneTemp">--°C</div>
+              <div class="scene-condition" id="sceneCondition">Loading...</div>
+            </div>
+            <div class="ground">
+              <!-- Ground with CSS grass effect -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Farming Recommendations -->
+    <section class="recommendations-section">
+      <h2>🎯 Smart Recommendations for You</h2>
+      
+      <!-- Overall Condition -->
+      <div class="overall-condition" id="overallCondition">
+        <div class="condition-icon">⏳</div>
+        <div class="condition-text">
+          <h3>Loading your farming conditions...</h3>
+          <p>Please wait while we analyze the weather</p>
+        </div>
+      </div>
+
+      <!-- Recommendation Cards -->
+      <div class="recommendation-grid" id="recommendationGrid">
+        <!-- Dynamic content will be inserted here -->
+      </div>
+    </section>
+
+    <!-- Irrigation Advice -->
+    <section class="irrigation-section">
+      <h2>💧 Water Management</h2>
+      <div class="irrigation-card" id="irrigationCard">
+        <div class="irrigation-icon">💦</div>
+        <div class="irrigation-content">
+          <h3>Loading irrigation advice...</h3>
+          <p>Calculating water requirements...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Suitable Crops -->
+    <section class="suitable-crops-section">
+      <h2>🌾 Best Crops for Current Weather</h2>
+      <div class="crops-grid" id="cropsGrid">
+        <!-- Dynamic content will be inserted here -->
+      </div>
+    </section>
+
+    <!-- Farming Alerts -->
+    <section class="farming-alerts-section">
+      <h2>⚠️ Important Farming Alerts</h2>
+      <div class="alerts-container" id="farmingAlerts">
+        <!-- Dynamic alerts will be inserted here -->
+      </div>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="quick-actions">
+      <h2>🚀 Quick Actions</h2>
+      <div class="actions-grid">
+        <button class="action-btn" onclick="refreshFarmingData()">
+          <i class="fas fa-sync-alt"></i>
+          <span>Refresh Data</span>
+        </button>
+        <button class="action-btn" onclick="showWeatherForecast()">
+          <i class="fas fa-calendar-week"></i>
+          <span>7-Day Forecast</span>
+        </button>
+        <button class="action-btn" onclick="showCropCalendar()">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Crop Calendar</span>
+        </button>
+        <button class="action-btn" onclick="showExpertTips()">
+          <i class="fas fa-lightbulb"></i>
+          <span>Expert Tips</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <p class="loading-text">Loading farming insights...</p>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal" id="forecastModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('forecastModal')">&times;</span>
+      <h2>7-Day Weather Forecast</h2>
+      <div id="forecastContent">Coming soon...</div>
+    </div>
+  </div>
+
+  <div class="modal" id="calendarModal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('calendarModal')">&times;</span>
+      <h2>Seasonal Crop Calendar</h2>
+      <div id="calendarContent">Loading calendar...</div>
+    </div>
+  </div>
+
+  <script src="farming.js"></script>
+</body>
+</html>

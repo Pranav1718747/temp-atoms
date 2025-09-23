@@ -60,10 +60,15 @@
           <i class="fas fa-sync-alt"></i>
           <span>Refresh</span>
         </button>
+        <a href="alerts.html" class="alerts-link">
+          <i class="fas fa-bell"></i>
+          <span>Environmental Alerts</span>
+        </a>
         <a href="farming.html" class="farming-link">
           <i class="fas fa-tractor"></i>
           <span>Farming Dashboard</span>
         </a>
+
       </div>
     </section>
 
@@ -146,6 +151,19 @@
             <i class="fas fa-sun weather-display-icon" id="weatherIcon"></i>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- ML Weather Predictions Section -->
+    <section class="ml-predictions-section">
+      <div class="ml-header">
+        <h2><i class="fas fa-brain"></i> AI Weather Predictions (7 Days)</h2>
+        <button id="generatePredictionsBtn" class="predict-btn" onclick="loadWeatherPredictions()">
+          <i class="fas fa-magic"></i> Generate Predictions
+        </button>
+      </div>
+      <div class="ml-predictions-grid" id="weatherPredictions" style="display: none;">
+        <!-- Weather predictions will be loaded here -->
       </div>
     </section>
 

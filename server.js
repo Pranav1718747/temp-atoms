@@ -2,15 +2,18 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const ClimateAPIService = require('./utils/climateAPIs');
 const ClimateDB = require('./database/db');
 const AlertService = require('./services/alertService');
 const FarmingService = require('./services/farmingService');
+const MLService = require('./ml/ml_service');
 const { router: weatherRouter, initializeRouter } = require('./routes/weather');
 const { router: alertRouter, initializeAlertRouter } = require('./routes/alerts');
 const { router: farmingRouter, initializeFarmingRouter } = require('./routes/farming');
+const { router: mlRouter, initializeMLRouter } = require('./routes/ml');
 
 const app = express();
 const server = http.createServer(app);
@@ -25,25 +28,31 @@ app.use(cors());
 app.use(express.json());
 
 // Serve static frontend files
-app.use(express.static('frontend'));
+app.use(express.static(path.join(__dirname, 'frontend')));
 
+// API routes
 app.use('/api/weather', weatherRouter);
 app.use('/api/alerts', alertRouter);
 app.use('/api/farming', farmingRouter);
+app.use('/api/ml', mlRouter);
 
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'healthy', message: 'ClimateSync backend is running!' });
 });
 
+// Initialize services
 const climateAPI = new ClimateAPIService();
 const climateDB = new ClimateDB();
 const alertService = new AlertService(climateDB, io);
 const farmingService = new FarmingService(climateDB);
+const mlService = new MLService(climateDB);
 
-// Initialize the weather router with shared instances
+// Initialize route handlers with shared instances
 initializeRouter(climateAPI, climateDB);
 initializeAlertRouter(alertService);
 initializeFarmingRouter(farmingService, climateDB);
+initializeMLRouter(mlService);
 
 // Get active cities from database
 let cities = [];
@@ -53,7 +62,7 @@ let cityIds = {};
 function loadCitiesFromDB() {
   try {
     const allCities = climateDB.getAllCities();
-    cities = allCities.slice(0, 10).map(city => city.name); // Start with top 10 cities
+    cities = allCities.slice(0, 10).map(city => city.name);
     cityIds = {};
     
     allCities.forEach(city => {
@@ -76,21 +85,16 @@ io.on('connection', (socket) => {
   socket.on('subscribe_weather', (city) => {
     console.log(`User subscribed to ${city} weather`);
     socket.join(`weather_${city}`);
-  });
-
-  socket.on('subscribe_alerts', (data) => {
-    console.log(`User subscribed to alerts for ${data.city}`);
-    socket.join(`alerts_${data.city}`);
     
     // Save subscription to database
     try {
-      const cityInfo = climateDB.getCityByName(data.city);
+      const cityInfo = climateDB.getCityByName(city);
       if (cityInfo) {
         alertService.subscribeToAlerts(
           socket.id, 
           cityInfo.id, 
-          data.city, 
-          data.alertTypes || ['FLOOD', 'HEAT']
+          city, 
+          ['FLOOD', 'HEAT']
         );
       }
     } catch (error) {
@@ -109,7 +113,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Fetch weather every 15 minutes and broadcast
+// Fetch weather every 30 minutes and broadcast
 setInterval(async () => {
   console.log('Fetching latest weather...');
   for (const city of cities) {
@@ -154,14 +158,14 @@ setInterval(async () => {
           sunset: weather.openWeatherData.data.sys?.sunset,
         };
         climateDB.insertWeatherData(dataToSave);
-
+        
         // Analyze weather data for alerts
         try {
           alertService.analyzeWeatherData(dataToSave);
         } catch (alertError) {
           console.error(`Error analyzing weather data for alerts in ${city}:`, alertError.message);
         }
-
+        
         // Broadcast update to subscribed clients
         io.to(`weather_${city}`).emit('weather_update', dataToSave);
         console.log(`Successfully fetched and saved weather for ${city}`);
@@ -170,16 +174,16 @@ setInterval(async () => {
         // Try to get data from IMD as fallback
         if (weather.imdData && weather.imdData.data) {
           console.log(`Using IMD data as fallback for ${city}`);
-          // Handle IMD data format here if needed
+          // Handle IMD data format here
         }
       }
     } catch (err) {
       console.error(`Error fetching weather for ${city}:`, err.message);
     }
   }
-}, 30 * 60 * 1000); // every 30 minutes (was 15)
+}, 30 * 60 * 1000); // every 30 minutes
 
-// Fetch initial weather data on startup
+// Fetch initial weather data
 async function fetchInitialWeather() {
   console.log('Fetching initial weather data...');
   for (const cityName of cities) {
@@ -205,44 +209,23 @@ async function fetchInitialWeather() {
           rainfall: weather.openWeatherData.data.rain?.['1h'] || 0,
           wind_speed: weather.openWeatherData.data.wind?.speed,
           wind_direction: weather.openWeatherData.data.wind?.deg,
-          wind_gust: weather.openWeatherData.data.wind?.gust,
-          visibility: weather.openWeatherData.data.visibility,
-          uv_index: weather.openWeatherData.data.uv_index,
-          cloud_cover: weather.openWeatherData.data.clouds?.all,
-          dew_point: weather.openWeatherData.data.dew_point,
-          // Enhanced agricultural parameters
-          heat_index: weather.openWeatherData.data.heat_index,
-          wind_chill: weather.openWeatherData.data.wind_chill,
-          soil_temperature: weather.openWeatherData.data.soil_temperature,
-          soil_moisture: weather.openWeatherData.data.soil_moisture,
-          evapotranspiration: weather.openWeatherData.data.evapotranspiration,
-          growing_degree_days: weather.openWeatherData.data.growing_degree_days,
-          air_quality_pm25: weather.openWeatherData.data.air_quality?.pm25,
-          air_quality_pm10: weather.openWeatherData.data.air_quality?.pm10,
-          air_quality_index: weather.openWeatherData.data.air_quality?.aqi,
-          pressure_trend: weather.openWeatherData.data.pressure_trend,
-          moon_phase: weather.openWeatherData.data.moon_phase,
-          moon_illumination: weather.openWeatherData.data.moon_illumination,
           weather_description: weather.openWeatherData.data.weather[0].description,
           weather_condition: weather.openWeatherData.data.weather[0].main,
           data_source: weather.openWeatherData.source || 'OpenWeather',
-          sunrise: weather.openWeatherData.data.sys?.sunrise,
-          sunset: weather.openWeatherData.data.sys?.sunset,
         };
-        climateDB.insertWeatherData(dataToSave);
-        console.log(`Initial weather data saved for ${cityName}`);
         
-        // Analyze initial weather data for alerts
+        climateDB.insertWeatherData(dataToSave);
+        
+        // Analyze weather data for alerts
         try {
           alertService.analyzeWeatherData(dataToSave);
         } catch (alertError) {
-          console.error(`Error analyzing initial weather data for alerts in ${cityName}:`, alertError.message);
+          console.error(`Error analyzing weather data for alerts in ${cityName}:`, alertError.message);
         }
         
-        // Broadcast to any connected clients
-        io.to(`weather_${cityName}`).emit('weather_update', dataToSave);
+        console.log(`Successfully fetched and saved initial weather for ${cityName}`);
       } else {
-        console.log(`No initial weather data available for ${cityName}`);
+        console.error(`No initial weather data received for ${cityName}`);
       }
     } catch (err) {
       console.error(`Error fetching initial weather for ${cityName}:`, err.message);
@@ -250,27 +233,31 @@ async function fetchInitialWeather() {
   }
 }
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('OpenWeather API Key:', process.env.OPENWEATHER_API_KEY ? 'Loaded' : 'Missing');
-  console.log(`Frontend available at: http://localhost:${PORT}`);
-  
-  // Load cities from database
-  loadCitiesFromDB();
-  
-  // Fetch initial data
-  setTimeout(fetchInitialWeather, 1000); // Wait 1 second for everything to initialize
-  
-  // Clean old weather data on startup (keep last 30 days)
-  setTimeout(() => {
-    try {
-      const cleaned = climateDB.cleanOldWeatherData(30);
-      if (cleaned > 0) {
-        console.log(`Cleaned ${cleaned} old weather records on startup`);
-      }
-    } catch (error) {
-      console.error('Error cleaning old data:', error.message);
-    }
-  }, 2000);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Load cities from database
+    loadCitiesFromDB();
+    
+    // Initialize ML service (includes table creation)
+    await mlService.initialize();
+    
+    // Fetch initial weather data
+    await fetchInitialWeather();
+    
+    // Start server
+    const PORT = process.env.PORT || 4001;
+    server.listen(PORT, () => {
+      console.log(`🌤️  ClimateSync Server running on port ${PORT}`);
+      console.log(`📊 Dashboard: http://localhost:${PORT}`);
+      console.log(`🔗 API Health: http://localhost:${PORT}/api/health`);
+      console.log(`🤖 ML API: http://localhost:${PORT}/api/ml/health`);
+    });
+  } catch (error) {
+    console.error('Error starting server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();

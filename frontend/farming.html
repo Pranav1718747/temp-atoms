@@ -369,7 +369,12 @@
 
     <!-- Suitable Crops -->
     <section class="suitable-crops-section">
-      <h2>🌾 Best Crops for Current Weather</h2>
+      <div class="ml-header">
+        <h2>🌾 AI Crop Recommendations</h2>
+        <button id="generateCropRecommendations" class="predict-btn" onclick="loadCropRecommendations()">
+          <i class="fas fa-brain"></i> Get AI Recommendations
+        </button>
+      </div>
       <div class="crops-grid" id="cropsGrid">
         <!-- Dynamic content will be inserted here -->
       </div>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌊 ClimateSync - Environmental Alerts</title>
+    <link rel="stylesheet" href="alerts.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="background-animation">
+        <div class="floating-particles"></div>
+        <div class="gradient-overlay"></div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="main-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <div class="logo-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Environmental Alerts</h1>
+                    <p>AI-Powered Climate Risk Monitoring</p>
+                </div>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Real-time Monitoring</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="navigation">
+        <div class="nav-container">
+            <a href="index.html" class="nav-button">
+                <i class="fas fa-cloud-sun"></i>
+                <span>Weather Dashboard</span>
+            </a>
+            <a href="farming.html" class="nav-button">
+                <i class="fas fa-seedling"></i>
+                <span>Farmer's Dashboard</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="alert-section">
+        <!-- AI Predictions Section -->
+        <section class="ml-predictions-section">
+            <div class="section-header">
+                <h2><i class="fas fa-brain"></i> AI Environmental Predictions</h2>
+                <div class="ml-controls">
+                    <div class="select-wrapper">
+                        <select id="citySelect" class="city-select">
+                            <option value="">🏙️ Select a city</option>
+                            <option value="Delhi">🏛️ Delhi</option>
+                            <option value="Mumbai">🏢 Mumbai</option>
+                            <option value="Chennai">🏖️ Chennai</option>
+                            <option value="Bangalore">🌳 Bangalore</option>
+                            <option value="Kolkata">🏛️ Kolkata</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-arrow"></i>
+                    </div>
+                    <button id="generateAlertsBtn" class="predict-btn" onclick="loadAlertPredictions()">
+                        <i class="fas fa-magic"></i>
+                        <span>Predict Alerts</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+            </div>
+            <div class="alert-predictions-grid" id="alertPredictions" style="display: none;">
+                <!-- Alert predictions will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Alert Cards Grid -->
+        <section class="alerts-grid">
+            <div class="grid-header">
+                <h2>🚨 Current Alert Status</h2>
+                <p>Monitor real-time environmental conditions and risks</p>
+            </div>
+
+            <div class="alert-cards-container">
+                <div class="alert-card heatwave" data-alert-type="heatwave">
+                    <div class="alert-background">
+                        <div class="animated-bg heatwave-bg"></div>
+                    </div>
+                    <div class="alert-header">
+                        <div class="alert-icon-container">
+                            <div class="alert-icon">
+                                <i class="fas fa-thermometer-full"></i>
+                            </div>
+                            <div class="icon-glow heatwave-glow"></div>
+                        </div>
+                        <div class="alert-title-section">
+                            <h3 class="alert-title">Heatwave Alert</h3>
+                            <div class="alert-badge high-risk">High Risk</div>
+                        </div>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-temperature-high"></i>
+                                <span class="stat-value">38°C</span>
+                                <span class="stat-label">Current</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-clock"></i>
+                                <span class="stat-value">7 days</span>
+                                <span class="stat-label">Duration</span>
+                            </div>
+                        </div>
+                        <div class="alert-info" id="heatwave-info">
+                            <p>Loading comprehensive heatwave analysis...</p>
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button class="action-btn primary" onclick="getHeatwaveAlert()">
+                            <i class="fas fa-search"></i>
+                            <span>Analyze Risk</span>
+                        </button>
+                        <button class="action-btn secondary">
+                            <i class="fas fa-bell"></i>
+                            <span>Set Alert</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert-card flood" data-alert-type="flood">
+                    <div class="alert-background">
+                        <div class="animated-bg flood-bg"></div>
+                    </div>
+                    <div class="alert-header">
+                        <div class="alert-icon-container">
+                            <div class="alert-icon">
+                                <i class="fas fa-water"></i>
+                            </div>
+                            <div class="icon-glow flood-glow"></div>
+                        </div>
+                        <div class="alert-title-section">
+                            <h3 class="alert-title">Flood Prediction</h3>
+                            <div class="alert-badge moderate-risk">Moderate Risk</div>
+                        </div>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-tint"></i>
+                                <span class="stat-value">9.5m</span>
+                                <span class="stat-label">River Level</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-clock"></i>
+                                <span class="stat-value">48h</span>
+                                <span class="stat-label">Peak Time</span>
+                            </div>
+                        </div>
+                        <div class="alert-info" id="flood-info">
+                            <p>Loading flood prediction models...</p>
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button class="action-btn primary" onclick="getFloodPrediction()">
+                            <i class="fas fa-waves"></i>
+                            <span>Check Status</span>
+                        </button>
+                        <button class="action-btn secondary">
+                            <i class="fas fa-map"></i>
+                            <span>View Map</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert-card drought" data-alert-type="drought">
+                    <div class="alert-background">
+                        <div class="animated-bg drought-bg"></div>
+                    </div>
+                    <div class="alert-header">
+                        <div class="alert-icon-container">
+                            <div class="alert-icon">
+                                <i class="fas fa-seedling"></i>
+                            </div>
+                            <div class="icon-glow drought-glow"></div>
+                        </div>
+                        <div class="alert-title-section">
+                            <h3 class="alert-title">Drought Warning</h3>
+                            <div class="alert-badge low-risk">Low Risk</div>
+                        </div>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-percentage"></i>
+                                <span class="stat-value">12%</span>
+                                <span class="stat-label">Soil Moisture</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-calendar"></i>
+                                <span class="stat-value">3 months</span>
+                                <span class="stat-label">Duration</span>
+                            </div>
+                        </div>
+                        <div class="alert-info" id="drought-info">
+                            <p>Loading drought assessment data...</p>
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button class="action-btn primary" onclick="getDroughtWarning()">
+                            <i class="fas fa-sun"></i>
+                            <span>Assess Risk</span>
+                        </button>
+                        <button class="action-btn secondary">
+                            <i class="fas fa-chart-area"></i>
+                            <span>View Trends</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alert-card coastal" data-alert-type="coastal">
+                    <div class="alert-background">
+                        <div class="animated-bg coastal-bg"></div>
+                    </div>
+                    <div class="alert-header">
+                        <div class="alert-icon-container">
+                            <div class="alert-icon">
+                                <i class="fas fa-ship"></i>
+                            </div>
+                            <div class="icon-glow coastal-glow"></div>
+                        </div>
+                        <div class="alert-title-section">
+                            <h3 class="alert-title">Coastal Monitoring</h3>
+                            <div class="alert-badge medium-risk">Medium Risk</div>
+                        </div>
+                    </div>
+                    <div class="alert-content">
+                        <div class="alert-stats">
+                            <div class="stat-item">
+                                <i class="fas fa-arrow-up"></i>
+                                <span class="stat-value">1.2m</span>
+                                <span class="stat-label">Storm Surge</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-water"></i>
+                                <span class="stat-value">4m</span>
+                                <span class="stat-label">Wave Height</span>
+                            </div>
+                        </div>
+                        <div class="alert-info" id="coastal-info">
+                            <p>Loading coastal monitoring systems...</p>
+                        </div>
+                    </div>
+                    <div class="alert-actions">
+                        <button class="action-btn primary" onclick="getCoastalMonitoring()">
+                            <i class="fas fa-binoculars"></i>
+                            <span>Monitor Coast</span>
+                        </button>
+                        <button class="action-btn secondary">
+                            <i class="fas fa-satellite"></i>
+                            <span>Satellite View</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // =============== ML ALERT PREDICTIONS ===============
+        
+        // Load ML alert predictions for selected city
+        async function loadAlertPredictions() {
+            const citySelect = document.getElementById('citySelect');
+            const city = citySelect.value;
+            
+            if (!city) {
+                alert('Please select a city');
+                return;
+            }
+
+            const predictionsSection = document.getElementById('alertPredictions');
+            const generateBtn = document.getElementById('generateAlertsBtn');
+            
+            // Show loading state
+            predictionsSection.style.display = 'grid';
+            predictionsSection.innerHTML = '<div class="ml-loading"><i class="fas fa-spinner fa-spin"></i><p>Analyzing environmental risks...</p></div>';
+            
+            // Disable button
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            
+            try {
+                const response = await fetch(`http://localhost:4001/api/ml/alerts/${city}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayAlertPredictions(data.alerts);
+                } else {
+                    throw new Error(data.error || 'Failed to load alert predictions');
+                }
+            } catch (error) {
+                console.error('Error loading alert predictions:', error);
+                predictionsSection.innerHTML = `<div class="ml-error">Error loading alert predictions: ${error.message}</div>`;
+            } finally {
+                // Re-enable button
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Predict Alerts';
+            }
+        }
+        
+        // Display alert predictions in the grid
+        function displayAlertPredictions(alerts) {
+            const container = document.getElementById('alertPredictions');
+            let html = '';
+            
+            Object.entries(alerts).forEach(([alertType, alert]) => {
+                const levelClass = `alert-${alert.level.toLowerCase()}`;
+                const probabilityColor = getProbabilityColor(alert.probability);
+                const icon = getAlertTypeIcon(alertType);
+                
+                html += `
+                    <div class="prediction-alert-card ${levelClass}">
+                        <div class="alert-type-header">
+                            <div class="alert-type-icon">${icon}</div>
+                            <h3 class="alert-type-name">${alertType.charAt(0).toUpperCase() + alertType.slice(1)} Alert</h3>
+                        </div>
+                        <div class="alert-level-display">
+                            <div class="level-badge level-${alert.level.toLowerCase()}">${alert.level}</div>
+                        </div>
+                        <div class="probability-display">
+                            <div class="probability-circle" style="background: conic-gradient(${probabilityColor} ${alert.probability * 360}deg, #e0e0e0 0deg)">
+                                <div class="probability-inner">
+                                    <span class="probability-value">${(alert.probability * 100).toFixed(0)}%</span>
+                                    <span class="probability-label">Probability</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert-details">
+                            <div class="detail-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>Next 48 hours</span>
+                            </div>
+                            <div class="detail-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${document.getElementById('citySelect').value}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // Helper functions
+        function getProbabilityColor(probability) {
+            if (probability >= 0.7) return '#f44336';
+            if (probability >= 0.5) return '#ff9800';
+            if (probability >= 0.3) return '#ffeb3b';
+            return '#4caf50';
+        }
+        
+        function getAlertTypeIcon(alertType) {
+            const icons = {
+                'drought': '🌵',
+                'flood': '🌊',
+                'heatwave': '🔥',
+                'storm': '⛈️',
+                'cold': '❄️',
+                'cyclone': '🌀'
+            };
+            return icons[alertType.toLowerCase()] || '⚠️';
+        }
+        
+        // Existing functions
+        function getHeatwaveAlert() {
+            document.getElementById('heatwave-info').innerHTML = `
+                <strong>Heatwave Alert:</strong><br>
+                Current temperature: 38°C<br>
+                Heatwave risk level: High<br>
+                Duration: 7 days<br>
+                Recommendation: Stay indoors, keep hydrated, check on vulnerable individuals
+            `;
+            document.querySelector('.heatwave').classList.add('active');
+        }
+
+        function getFloodPrediction() {
+            document.getElementById('flood-info').innerHTML = `
+                <strong>Flood Prediction:</strong><br>
+                River level: 9.5m (critical: 10m)<br>
+                Risk level: Moderate<br>
+                Expected peak: 48 hours
+            `;
+            document.querySelector('.flood').classList.add('active');
+        }
+
+        function getDroughtWarning() {
+            document.getElementById('drought-info').innerHTML = `
+                <strong>Drought Warning:</strong><br>
+                Soil moisture: 12%<br>
+                Precipitation deficit: 30%<br>
+                Duration: 3 months
+            `;
+            document.querySelector('.drought').classList.add('active');
+        }
+
+        function getCoastalMonitoring() {
+            document.getElementById('coastal-info').innerHTML = `
+                <strong>Coastal Monitoring:</strong><br>
+                Storm surge: 1.2m<br>
+                Wave height: 4m<br>
+                Expected impact: 72 hours
+            `;
+            document.querySelector('.coastal').classList.add('active');
+        }
+    </script>
+</body>
+</html>

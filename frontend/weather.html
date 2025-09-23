@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .dashboard {
+            padding: 3rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            margin-top: 4rem;
+            background: linear-gradient(to bottom right, #f8f9fa, #ffffff, #f8f9fa);
+            border-radius: 25px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 6rem;
+            animation: sectionGlow 5s ease-in-out infinite;
+        }
+
+        @keyframes sectionGlow {
+            0%, 100% { box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1); }
+            50% { box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15); }
+        }
+
+        .city-select {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .city-button {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(45deg, #007bff 60%, #0099ff 40%);
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .city-button:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 30px rgba(0, 123, 255, 0.4);
+            background: linear-gradient(45deg, #0056b3 60%, #007bff 40%);
+        }
+
+        .weather-card {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            margin: 2.5rem 0;
+            padding: 3rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .weather-icon {
+            font-size: 4rem;
+            color: #007bff;
+        }
+
+        .temperature {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #333;
+            margin-right: 1rem;
+        }
+
+        .unit {
+            font-size: 1.5rem;
+            color: #666;
+            vertical-align: top;
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .detail-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .detail-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-title {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .detail-value {
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .last-updated {
+            text-align: right;
+            color: #999;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="city-select">
+            <a href="javascript:void(0)" class="city-button" onclick="getWeather('Delhi')">Delhi</a>
+            <a href="javascript:void(0)" class="city-button" onclick="getWeather('Mumbai')">Mumbai</a>
+            <a href="javascript:void(0)" class="city-button" onclick="getWeather('Chennai')">Chennai</a>
+        </div>
+
+        <div id="weather-container">
+            <div class="weather-card" id="weather-card" style="display: none">
+                <div class="weather-header">
+                    <div>
+                        <h2 id="city-name"></h2>
+                        <div class="temperature" id="temperature"></div>
+                    </div>
+                    <i class="fas fa-cloud-sun weather-icon" id="weather-icon"></i>
+                </div>
+
+                <p id="weather-description"></p>
+
+                <div class="weather-details">
+                    <div class="detail-card">
+                        <div class="detail-title">Humidity</div>
+                        <div class="detail-value" id="humidity"></div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-title">Rainfall</div>
+                        <div class="detail-value" id="rainfall"></div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-title">Wind Speed</div>
+                        <div class="detail-value" id="wind-speed"></div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-title">Pressure</div>
+                        <div class="detail-value" id="pressure"></div>
+                    </div>
+                </div>
+
+                <div class="last-updated" id="last-updated"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function getWeather(city) {
+            try {
+                const response = await fetch(`/api/weather/latest/${city}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
+
+                const weatherData = data.data;
+
+                // Update city name
+                document.getElementById('city-name').textContent = weatherData.city_name;
+
+                // Update temperature
+                document.getElementById('temperature').innerHTML = `
+                    ${weatherData.temperature}<span class="unit">°C</span>
+                `;
+
+                // Update description
+                document.getElementById('weather-description').textContent = 
+                    weatherData.weather_description;
+
+                // Update details
+                document.getElementById('humidity').textContent = 
+                    `${weatherData.humidity}%`;
+                document.getElementById('rainfall').textContent = 
+                    `${weatherData.rainfall} mm`;
+                document.getElementById('wind-speed').textContent = 
+                    `${weatherData.wind_speed} m/s`;
+                document.getElementById('pressure').textContent = 
+                    `${weatherData.pressure} hPa`;
+
+                // Update last updated time
+                const updatedAt = new Date(weatherData.recorded_at);
+                document.getElementById('last-updated').textContent = 
+                    `Last updated: ${updatedAt.toLocaleString()}`;
+
+                // Show the weather card
+                document.getElementById('weather-card').style.display = 'block';
+            } catch (error) {
+                console.error('Error fetching weather:', error);
+                alert(`Failed to get weather data for ${city}: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

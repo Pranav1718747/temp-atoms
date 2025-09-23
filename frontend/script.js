@@ -1,4 +1,4 @@
-const socket = io('http://localhost:5000');
+const socket = io('http://localhost:4001');
 
 const citySelect = document.getElementById('citySelect');
 let currentCity = citySelect.value;
@@ -14,7 +14,7 @@ let activeAlerts = new Map(); // Store active alerts to prevent duplicates
 async function loadCities() {
   try {
     console.log('Loading available cities...');
-    const response = await fetch('http://localhost:5000/api/weather/cities?limit=15');
+    const response = await fetch('http://localhost:4001/api/weather/cities?limit=15');
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -80,7 +80,7 @@ async function fetchCurrentWeather(city) {
     showLoading();
     
     console.log(`Fetching current weather for ${city}...`);
-    const response = await fetch(`http://localhost:5000/api/weather/current/${city}`);
+    const response = await fetch(`http://localhost:4001/api/weather/current/${city}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -124,7 +124,7 @@ async function fetchCurrentWeather(city) {
 async function fetchFromDatabase(city) {
   try {
     console.log(`Trying to fetch cached data for ${city}...`);
-    const response = await fetch(`http://localhost:5000/api/weather/latest/${city}`);
+    const response = await fetch(`http://localhost:4001/api/weather/latest/${city}`);
     
     if (response.ok) {
       const result = await response.json();
@@ -450,6 +450,91 @@ socket.on('alert_update', (alert) => {
   console.log('Received alert update:', alert);
   if (alert.city === currentCity) {
     displayAlert(alert);
+    updateAlertPage(alert);
+  }
+});
+
+// Update alerts page with new alert
+function updateAlertPage(alert) {
+  // Check if we're on the alerts page
+  if (window.location.pathname.endsWith('alerts.html')) {
+    const alertType = alert.type.toLowerCase();
+    const alertInfo = document.getElementById(`${alertType}-info`);
+    
+    if (alertInfo) {
+      const message = `${alert.message} (Level: ${alert.level})`;
+      alertInfo.textContent = message;
+      
+      // Add visual indicator
+      const alertCard = alertInfo.closest('.alert-card');
+      if (alertCard) {
+        alertCard.classList.add('active');
+        setTimeout(() => {
+          alertCard.classList.remove('active');
+        }, 3000);
+      }
+    }
+  }
+}
+
+// Function to manually check alerts
+function checkAlerts() {
+  const city = document.getElementById('citySelect').value;
+  if (city) {
+    // Get alerts from API
+    fetch(`http://localhost:4001/api/alerts/city/${city}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.data) {
+          // Display alerts
+          if (data.data.flood && data.data.flood.length > 0) {
+            data.data.flood.forEach(alert => {
+              displayAlertFromDB(alert, 'FLOOD');
+              updateAlertPage({
+                type: 'FLOOD',
+                level: alert.alert_level,
+                city: city,
+                message: alert.alert_message
+              });
+            });
+          }
+          
+          if (data.data.heat && data.data.heat.length > 0) {
+            data.data.heat.forEach(alert => {
+              displayAlertFromDB(alert, 'HEAT');
+              updateAlertPage({
+                type: 'HEAT',
+                level: alert.alert_level,
+                city: city,
+                message: alert.alert_message
+              });
+            });
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching alerts:', error);
+      });
+  }
+}
+
+// Add event listener for alert buttons
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if we're on the alerts page
+  if (window.location.pathname.endsWith('alerts.html')) {
+    // Add click handlers for alert buttons
+    const alertButtons = document.querySelectorAll('.alert-card button');
+    alertButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        checkAlerts();
+      });
+    });
+    
+    // Initialize alerts on page load
+    const city = document.getElementById('citySelect').value;
+    if (city) {
+      checkAlerts();
+    }
   }
 });
 
@@ -557,7 +642,7 @@ async function loadAlertsForCity(cityName) {
       return;
     }
     
-    const response = await fetch(`http://localhost:5000/api/alerts/city/${city.id}`);
+    const response = await fetch(`http://localhost:4001/api/alerts/city/${city.id}`);
     if (!response.ok) {
       if (response.status === 404) {
         console.log(`No alerts found for ${cityName}`);
@@ -665,12 +750,10 @@ function displayAlert(alert) {
     alertElement.classList.add('show');
   }, 100);
   
-  // Auto-hide after 10 seconds for low level alerts
-  if (alert.level === 'LOW') {
-    setTimeout(() => {
-      closeAlert(alertKey);
-    }, 10000);
-  }
+  // Auto-hide after 3 seconds for all alerts
+  setTimeout(() => {
+    closeAlert(alertKey);
+  }, 3000);
   
   console.log('Alert displayed:', alert);
 }
@@ -713,4 +796,143 @@ function clearAlerts() {
     alertsContainer.innerHTML = '';
   }
   activeAlerts.clear();
+}
+
+// =============== ML WEATHER PREDICTIONS ===============
+
+// Load ML weather predictions for current city
+async function loadWeatherPredictions() {
+  const city = citySelect.value;
+  if (!city) {
+    alert('Please select a city');
+    return;
+  }
+
+  const predictionsSection = document.getElementById('weatherPredictions');
+  const generateBtn = document.getElementById('generatePredictionsBtn');
+  
+  // Show loading state
+  predictionsSection.style.display = 'grid';
+  predictionsSection.innerHTML = '<div class="ml-loading"><i class="fas fa-spinner"></i><p>Generating AI weather predictions...</p></div>';
+  
+  // Disable button
+  generateBtn.disabled = true;
+  generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  
+  try {
+    const response = await fetch(`http://localhost:4001/api/ml/weather/${city}?days=7`);
+    const data = await response.json();
+
+    if (data.success) {
+      displayWeatherPredictions(data.predictions);
+    } else {
+      throw new Error(data.error || 'Failed to load predictions');
+    }
+  } catch (error) {
+    console.error('Error loading weather predictions:', error);
+    predictionsSection.innerHTML = `<div class="ml-error">Error loading weather predictions: ${error.message}</div>`;
+  } finally {
+    // Re-enable button
+    generateBtn.disabled = false;
+    generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate Predictions';
+  }
+}
+
+// Display weather predictions in the grid
+function displayWeatherPredictions(predictions) {
+  const container = document.getElementById('weatherPredictions');
+  let html = '';
+  
+  if (predictions.temperature && predictions.temperature.predictions && predictions.temperature.predictions.length > 0) {
+    const validTemps = predictions.temperature.predictions.filter(p => p.temperature != null && !isNaN(p.temperature));
+    if (validTemps.length > 0) {
+      const avgTemp = validTemps.reduce((sum, p) => sum + p.temperature, 0) / validTemps.length;
+      const confidence = predictions.temperature.confidence || 0;
+      html += `
+        <div class="prediction-card">
+          <div class="card-title">🌡️ Average Temperature (7 days)</div>
+          <div class="card-value">${avgTemp.toFixed(1)}°C</div>
+          <div class="card-description">Confidence: ${(confidence * 100).toFixed(0)}%</div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: ${confidence * 100}%"></div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  if (predictions.rainfall && predictions.rainfall.predictions && predictions.rainfall.predictions.length > 0) {
+    const validRainfall = predictions.rainfall.predictions.filter(p => p.rainfall != null && !isNaN(p.rainfall));
+    if (validRainfall.length > 0) {
+      const totalRain = validRainfall.reduce((sum, p) => sum + p.rainfall, 0);
+      const confidence = predictions.rainfall.confidence || 0;
+      html += `
+        <div class="prediction-card">
+          <div class="card-title">🌧️ Total Rainfall (7 days)</div>
+          <div class="card-value">${totalRain.toFixed(1)} mm</div>
+          <div class="card-description">Confidence: ${(confidence * 100).toFixed(0)}%</div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: ${confidence * 100}%"></div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  if (predictions.humidity && predictions.humidity.predictions && predictions.humidity.predictions.length > 0) {
+    const validHumidity = predictions.humidity.predictions.filter(p => p.humidity != null && !isNaN(p.humidity));
+    if (validHumidity.length > 0) {
+      const avgHumidity = validHumidity.reduce((sum, p) => sum + p.humidity, 0) / validHumidity.length;
+      const confidence = predictions.humidity.confidence || 0;
+      html += `
+        <div class="prediction-card">
+          <div class="card-title">💧 Average Humidity (7 days)</div>
+          <div class="card-value">${avgHumidity.toFixed(0)}%</div>
+          <div class="card-description">Confidence: ${(confidence * 100).toFixed(0)}%</div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: ${confidence * 100}%"></div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // Add daily breakdown if available
+  if (predictions.temperature && predictions.temperature.predictions && predictions.temperature.predictions.length > 0) {
+    const validDays = predictions.temperature.predictions.filter(p => p.temperature != null && !isNaN(p.temperature));
+    if (validDays.length > 0) {
+      html += `
+        <div class="prediction-card" style="grid-column: 1 / -1;">
+          <div class="card-title">📊 7-Day Temperature Trend</div>
+          <div class="temperature-trend">
+      `;
+      
+      validDays.forEach((day, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() + index + 1);
+        const dayName = date.toLocaleDateString('en', { weekday: 'short' });
+        
+        html += `
+          <div class="trend-day">
+            <div class="trend-day-name">${dayName}</div>
+            <div class="trend-temp">${day.temperature.toFixed(1)}°C</div>
+          </div>
+        `;
+      });
+      
+      html += '</div></div>';
+    }
+  }
+  
+  // If no valid predictions were found, show a message
+  if (html === '') {
+    html = `
+      <div class="prediction-card" style="grid-column: 1 / -1;">
+        <div class="card-title">⚠️ No Predictions Available</div>
+        <div class="card-description">Unable to generate weather predictions. Please try again later or ensure there is sufficient historical data.</div>
+      </div>
+    `;
+  }
+  
+  container.innerHTML = html;
 }

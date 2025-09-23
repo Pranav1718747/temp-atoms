@@ -1,5 +1,5 @@
 // Farming Dashboard JavaScript
-const socket = io('http://localhost:5000');
+const socket = io('http://localhost:4001');
 
 // Global variables
 let currentCity = 'Delhi';
@@ -36,7 +36,7 @@ function setupEventListeners() {
 // Load available cities
 async function loadCities() {
   try {
-    const response = await fetch('http://localhost:5000/api/weather/cities?limit=15');
+    const response = await fetch('http://localhost:4001/api/weather/cities?limit=15');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
@@ -70,7 +70,7 @@ function populateCitySelect() {
 // Load crops data and populate dropdown
 async function loadCropsData() {
   try {
-    const response = await fetch('http://localhost:5000/api/farming/crops');
+    const response = await fetch('http://localhost:4001/api/farming/crops');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
@@ -107,7 +107,7 @@ async function loadFarmingDashboard() {
     showLoading();
     
     // Load dashboard data
-    const response = await fetch(`http://localhost:5000/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+    const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
@@ -340,15 +340,8 @@ function updateFarmingAlerts(alerts) {
   container.innerHTML = '';
   
   if (!alerts || alerts.length === 0) {
-    container.innerHTML = `
-      <div class="farming-alert">
-        <div class="alert-icon">✅</div>
-        <div class="alert-content">
-          <h4>No Critical Alerts</h4>
-          <p>All farming conditions are within normal ranges.</p>
-        </div>
-      </div>
-    `;
+    // Show notification for normal conditions (3-second popup)
+    showNotification('All farming conditions are within normal range', 'success', 3000);
     return;
   }
   
@@ -416,8 +409,49 @@ function showCropCalendar() {
   loadCropCalendar();
 }
 
+function showNotification(message, type = 'info', duration = 3000) {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-icon">${getNotificationIcon(type)}</span>
+      <span class="notification-message">${message}</span>
+      <button class="notification-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+    </div>
+  `;
+  
+  // Add notification to page
+  document.body.appendChild(notification);
+  
+  // Show notification with animation
+  setTimeout(() => {
+    notification.classList.add('show');
+  }, 100);
+  
+  // Auto-hide after specified duration
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.remove();
+      }
+    }, 300);
+  }, duration);
+}
+
+function getNotificationIcon(type) {
+  const icons = {
+    'info': 'ℹ️',
+    'success': '✅',
+    'warning': '⚠️',
+    'error': '❌'
+  };
+  return icons[type] || 'ℹ️';
+}
+
 function showExpertTips() {
-  alert('Expert tips feature coming soon! 🌾');
+  showNotification('Expert tips feature coming soon! 🌾', 'info', 3000);
 }
 
 function closeModal(modalId) {
@@ -427,7 +461,7 @@ function closeModal(modalId) {
 // Load crop calendar
 async function loadCropCalendar() {
   try {
-    const response = await fetch('http://localhost:5000/api/farming/calendar');
+    const response = await fetch('http://localhost:4001/api/farming/calendar');
     const result = await response.json();
     
     if (result.success) {
@@ -1688,3 +1722,116 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-refresh every 5 minutes
   setInterval(loadFarmingDashboard, 5 * 60 * 1000);
 });
+
+// =============== ML CROP RECOMMENDATIONS ===============
+
+// Load ML crop recommendations for current city
+async function loadCropRecommendations() {
+  const city = citySelect.value;
+  if (!city) {
+    alert('Please select a city');
+    return;
+  }
+
+  const cropsGrid = document.getElementById('cropsGrid');
+  const generateBtn = document.getElementById('generateCropRecommendations');
+  
+  // Show loading state
+  cropsGrid.innerHTML = '<div class="ml-loading"><i class="fas fa-spinner fa-spin"></i><p>Analyzing climate data for crop recommendations...</p></div>';
+  
+  // Disable button
+  generateBtn.disabled = true;
+  generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+  
+  try {
+    const response = await fetch(`http://localhost:4001/api/ml/crops/${city}`);
+    const data = await response.json();
+
+    if (data.success) {
+      displayCropRecommendations(data.recommendations);
+    } else {
+      throw new Error(data.error || 'Failed to load crop recommendations');
+    }
+  } catch (error) {
+    console.error('Error loading crop recommendations:', error);
+    cropsGrid.innerHTML = `<div class="ml-error">Error loading crop recommendations: ${error.message}</div>`;
+  } finally {
+    // Re-enable button
+    generateBtn.disabled = false;
+    generateBtn.innerHTML = '<i class="fas fa-brain"></i> Get AI Recommendations';
+  }
+}
+
+// Display crop recommendations in the grid
+function displayCropRecommendations(recommendations) {
+  const container = document.getElementById('cropsGrid');
+  let html = '';
+  
+  recommendations.slice(0, 8).forEach(crop => {
+    const suitabilityClass = getSuitabilityClass(crop.suitabilityScore);
+    const riskClass = getRiskClass(crop.riskLevel);
+    
+    html += `
+      <div class="crop-recommendation-card ${suitabilityClass}">
+        <div class="crop-icon">${getCropIcon(crop.name)}</div>
+        <div class="crop-info">
+          <h3 class="crop-name">${crop.name}</h3>
+          <div class="suitability-score">
+            <div class="score-value">${crop.suitabilityScore}%</div>
+            <div class="score-label">Suitability</div>
+          </div>
+          <div class="crop-details">
+            <div class="risk-level ${riskClass}">
+              <i class="fas fa-shield-alt"></i>
+              Risk: ${crop.riskLevel}
+            </div>
+            <div class="confidence-level">
+              <i class="fas fa-chart-line"></i>
+              Confidence: ${crop.confidence}%
+            </div>
+          </div>
+          <div class="growing-conditions">
+            <div class="condition-item">
+              <i class="fas fa-thermometer-half"></i>
+              ${crop.optimalConditions?.temperature || 'N/A'}
+            </div>
+            <div class="condition-item">
+              <i class="fas fa-tint"></i>
+              ${crop.optimalConditions?.rainfall || 'N/A'}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+// Helper functions for crop recommendations
+function getSuitabilityClass(score) {
+  if (score >= 80) return 'excellent';
+  if (score >= 60) return 'good';
+  if (score >= 40) return 'fair';
+  return 'poor';
+}
+
+function getRiskClass(risk) {
+  return risk.toLowerCase();
+}
+
+function getCropIcon(cropName) {
+  const icons = {
+    'Rice': '🌾',
+    'Wheat': '🌾',
+    'Cotton': '🌱',
+    'Sugarcane': '🎋',
+    'Tomato': '🍅',
+    'Onion': '🧅',
+    'Potato': '🥔',
+    'Corn': '🌽',
+    'Soybean': '🫘',
+    'Barley': '🌾'
+  };
+  return icons[cropName] || '🌱';
+}

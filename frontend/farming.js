@@ -136,10 +136,12 @@ function displaySearchResults(locations) {
 // Select a location from search results
 async function selectSearchLocation(index) {
   if (!currentSearchData || !currentSearchData[index]) {
+    console.error('No search data available for index:', index);
     return;
   }
   
   const location = currentSearchData[index];
+  console.log('🔄 [LOCATION CHANGE] Selected location:', location);
   
   // Hide search results
   document.getElementById('searchResults').style.display = 'none';
@@ -148,16 +150,96 @@ async function selectSearchLocation(index) {
   currentCity = location.name;
   currentLocationData = location;
   
+  console.log('🔄 [LOCATION CHANGE] Updated global variables:', {
+    currentCity,
+    currentLocationData: currentLocationData
+  });
+  
+  // Update search input to show selected location
+  const searchInput = document.getElementById('locationSearch');
+  if (searchInput) {
+    searchInput.value = `${location.name}, ${location.country || ''}`;
+  }
+  
   // Show notification
-  showNotification(`Selected: ${location.name}, ${location.country}`, 'success');
+  showNotification(`📍 Location changed to: ${location.name}, ${location.country}`, 'success');
+  
+  console.log('🌍 Location changed to:', location.name, 'coordinates:', location.latitude, location.longitude);
+  
+  // Update season display
+  updateSeasonDisplay(location);
   
   // For global locations, fetch weather data directly using coordinates
+  console.log('🔄 [LOCATION CHANGE] Starting weather data fetch...');
   await loadGlobalLocationWeather(location);
+}
+
+// Update season display based on location
+function updateSeasonDisplay(location) {
+  const seasonElement = document.getElementById('currentSeason');
+  if (!seasonElement) return;
+  
+  // Determine season based on latitude and current month
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  const latitude = location.latitude;
+  
+  let season = 'Unknown';
+  let seasonIcon = '🌿';
+  
+  // Northern hemisphere (latitude > 0)
+  if (latitude > 0) {
+    if (month >= 3 && month <= 5) {
+      season = 'Spring';
+      seasonIcon = '🌸';
+    } else if (month >= 6 && month <= 8) {
+      season = 'Summer';
+      seasonIcon = '☀️';
+    } else if (month >= 9 && month <= 11) {
+      season = 'Autumn';
+      seasonIcon = '🍂';
+    } else {
+      season = 'Winter';
+      seasonIcon = '❄️';
+    }
+  } else {
+    // Southern hemisphere (latitude < 0) - seasons are opposite
+    if (month >= 3 && month <= 5) {
+      season = 'Autumn';
+      seasonIcon = '🍂';
+    } else if (month >= 6 && month <= 8) {
+      season = 'Winter';
+      seasonIcon = '❄️';
+    } else if (month >= 9 && month <= 11) {
+      season = 'Spring';
+      seasonIcon = '🌸';
+    } else {
+      season = 'Summer';
+      seasonIcon = '☀️';
+    }
+  }
+  
+  // For tropical regions (between 23.5°N and 23.5°S), use wet/dry seasons
+  if (Math.abs(latitude) < 23.5) {
+    // Tropical region - use wet/dry season
+    if (month >= 4 && month <= 9) {
+      season = 'Wet Season';
+      seasonIcon = '🌧️';
+    } else {
+      season = 'Dry Season';
+      seasonIcon = '☀️';
+    }
+  }
+  
+  seasonElement.textContent = season;
+  const seasonIconElement = document.querySelector('.season-icon');
+  if (seasonIconElement) {
+    seasonIconElement.textContent = seasonIcon;
+  }
 }
 
 // Show search error
 function showSearchError(message) {
-  const resultsContainer = document.getElementById('searchResults');
   resultsContainer.innerHTML = `<div class="search-error">${message}</div>`;
   resultsContainer.style.display = 'block';
   console.log('Search error:', message);
@@ -557,48 +639,50 @@ function updateSpecificAgentDisplay(agentName, agentAnalysis) {
 // Load weather data for global locations using coordinates
 async function loadGlobalLocationWeather(location) {
   try {
-    console.log('Loading global weather for:', location.name, 'at', location.latitude, location.longitude);
+    console.log('🌦️ [API CALL] Starting weather fetch for:', location.name, 'at coordinates:', location.latitude, location.longitude);
     showLoading();
     
     // Fetch weather data using coordinates
-    const response = await fetch(`http://localhost:4001/api/weather/coordinates/${location.latitude}/${location.longitude}`);
-    console.log('Global weather API response status:', response.status);
+    const apiUrl = `http://localhost:4001/api/weather/coordinates/${location.latitude}/${location.longitude}`;
+    console.log('🌦️ [API CALL] Fetching from URL:', apiUrl);
+    
+    const response = await fetch(apiUrl);
+    console.log('🌦️ [API RESPONSE] Status:', response.status, 'OK:', response.ok);
     
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
-    console.log('=== FULL API RESPONSE FOR', location.name, '===');
-    console.log('Raw API result:', result);
+    console.log('🌦️ [API RESPONSE] Full result for', location.name, ':', result);
     
     if (result.success && result.weather) {
-      console.log('=== WEATHER DATA STRUCTURE ===');
-      console.log('result.weather:', result.weather);
-      console.log('result.weather.current:', result.weather.current);
+      console.log('🌦️ [API SUCCESS] Weather data structure:', {
+        hasWeather: !!result.weather,
+        hasCurrent: !!(result.weather && result.weather.current),
+        hasTemperature: !!(result.weather && result.weather.current && result.weather.current.temperature !== undefined)
+      });
       
       if (result.weather.current) {
-        console.log('=== INDIVIDUAL WEATHER VALUES ===');
-        console.log('Temperature:', result.weather.current.temperature, typeof result.weather.current.temperature);
-        console.log('Humidity:', result.weather.current.humidity, typeof result.weather.current.humidity);
-        console.log('Pressure:', result.weather.current.pressure, typeof result.weather.current.pressure);
-        console.log('Wind Speed:', result.weather.current.wind_speed, typeof result.weather.current.wind_speed);
-        console.log('Wind Direction:', result.weather.current.wind_direction, typeof result.weather.current.wind_direction);
-        console.log('UV Index:', result.weather.current.uv_index, typeof result.weather.current.uv_index);
-        console.log('Precipitation:', result.weather.current.precipitation, typeof result.weather.current.precipitation);
+        console.log('🌦️ [WEATHER DATA] Temperature:', result.weather.current.temperature, 'type:', typeof result.weather.current.temperature);
+        console.log('🌦️ [WEATHER DATA] Humidity:', result.weather.current.humidity, 'type:', typeof result.weather.current.humidity);
+        console.log('🌦️ [WEATHER DATA] Precipitation:', result.weather.current.precipitation, 'type:', typeof result.weather.current.precipitation);
       }
       
       // Transform the data to match farming dashboard format
+      console.log('🔄 [DATA TRANSFORM] Starting transformation...');
       const farmingData = transformGlobalWeatherForFarming(result.weather, location);
-      console.log('Transformed farming data for', location.name, ':', farmingData);
+      console.log('🔄 [DATA TRANSFORM] Transformed farming data for', location.name, ':', farmingData);
       
       // Update the farming dashboard with the transformed data
+      console.log('📊 [DASHBOARD UPDATE] Starting dashboard update...');
       updateFarmingDashboardWithGlobalData(farmingData, location);
+      console.log('📊 [DASHBOARD UPDATE] Dashboard update completed!');
     } else {
-      console.error('API response missing weather data:', result);
+      console.error('🌦️ [API ERROR] API response missing weather data:', result);
       throw new Error(result.error || 'Failed to load weather data');
     }
     
   } catch (error) {
-    console.error('Error loading global weather:', error);
+    console.error('❌ [ERROR] Error loading global weather:', error);
     showError(`Failed to load weather data for ${location.name}. Please try again.`);
   } finally {
     hideLoading();
@@ -727,14 +811,23 @@ function transformGlobalWeatherForFarming(weatherData, location) {
         }
       },
       // Add crop key for visual functions
-      key: 'rice'
+      key: currentCrop
     },
     suitable_crops: [],
-    farming_alerts: []
+    farming_alerts: [],
+    is_global_location: true,
+    city: { name: location.name, country: location.country }
   };
   
   console.log('=== FINAL TRANSFORMED DATA FOR', location.name, '===');
   console.log('Weather section:', transformedData.weather);
+  
+  // Immediately update humidity and AQI displays to ensure they change
+  setTimeout(() => {
+    updateAllHumidityDisplays(humidity);
+    updateAllAQIDisplays(transformedData.weather);
+  }, 100);
+  
   return transformedData;
 }
 
@@ -896,57 +989,219 @@ function updateFarmingDashboardWithGlobalData(data, location) {
   console.log('Input data:', data);
   console.log('Weather data being passed:', data.weather);
   
-  // Update weather summary cards (this works!)
-  updateWeatherSummary(data.weather, data.selected_crop.recommendations);
+  // Show visual feedback that data is updating
+  showNotification(`🔄 Updating farming data for ${location.name}...`, 'info', 2000);
   
-  // Use the SAME weather data that works for temp/humidity for comprehensive display
-  console.log('=== UPDATING COMPREHENSIVE WEATHER WITH SAME DATA ===');
-  updateComprehensiveWeatherFromBasicData(data.weather);
+  // Update location display in header
+  const farmingTitle = document.querySelector('.farming-title h1');
+  if (farmingTitle) {
+    farmingTitle.innerHTML = `🌾 Smart Farming Dashboard - ${location.name}`;
+  }
   
-  // Update comprehensive weather scene
-  updateComprehensiveWeatherScene(data.weather);
-  
-  // Update enhanced weather display with available data
-  updateGlobalWeatherDisplay(data.weather);
-  
-  // Update overall condition
-  updateOverallCondition(data.selected_crop.recommendations.conditions);
-  
-  // Update basic recommendations
-  updateBasicRecommendations(data.selected_crop.recommendations);
-  
-  // Update irrigation advice
-  updateIrrigation(data.selected_crop.recommendations.irrigation);
-  
-  // Clear crops and alerts sections for global locations
-  clearCropsAndAlerts();
+  try {
+    // Use the main updateDashboard function which has comprehensive error handling
+    console.log('=== CALLING MAIN UPDATE DASHBOARD ===');
+    updateDashboard(data);
+    
+    // Additional global location specific updates to ensure AQI and humidity are updated
+    console.log('=== FORCING AQI AND HUMIDITY UPDATES ===');
+    
+    // Force AQI update
+    const aqiValueElement = document.getElementById('aqiValue');
+    const aqiStatusElement = document.getElementById('aqiStatus');
+    if (data.weather && aqiValueElement) {
+      const precipitation = data.weather.rainfall || data.weather.precipitation || 0;
+      const windSpeed = data.weather.wind_speed || 0;
+      const humidity = data.weather.humidity || 60;
+      
+      let aqiValue = 50; // Default
+      if (precipitation > 2) aqiValue = 30;
+      else if (windSpeed > 10) aqiValue = 40;
+      else if (humidity > 80) aqiValue = 60;
+      
+      aqiValueElement.textContent = Math.round(aqiValue);
+      if (aqiStatusElement) {
+        aqiStatusElement.textContent = getAQIStatus(aqiValue);
+      }
+      console.log('✨ [FORCED AQI] Updated AQI to:', aqiValue, 'for', location.name);
+    }
+    
+    // Force humidity circle update  
+    const humidityProgressElement = document.getElementById('humidityProgress');
+    const humidityTextElement = document.getElementById('humidityText');
+    if (data.weather && humidityProgressElement && humidityTextElement) {
+      const humidity = data.weather.humidity || 60;
+      const circumference = 2 * Math.PI * 35;
+      const offset = circumference - (humidity / 100) * circumference;
+      humidityProgressElement.style.strokeDashoffset = offset;
+      humidityTextElement.textContent = `${humidity}%`;
+      console.log('✨ [FORCED HUMIDITY] Updated humidity circle to:', humidity + '% for', location.name);
+    }
+    
+    console.log('=== UPDATING ENHANCED WEATHER DISPLAY ===');
+    updateGlobalWeatherDisplay(data.weather);
+    
+    // Clear crops and alerts sections for global locations
+    clearCropsAndAlerts();
+    
+    // Show success notification
+    setTimeout(() => {
+      showNotification(`✅ Dashboard updated for ${location.name}!`, 'success', 3000);
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Error in updateFarmingDashboardWithGlobalData:', error);
+    showNotification(`Failed to update dashboard for ${location.name}. Please try again.`, 'error', 4000);
+  }
   
   console.log('=== DASHBOARD UPDATE COMPLETED FOR', location.name, '===');
 }
 
 // Update enhanced weather display for global locations
 function updateGlobalWeatherDisplay(weather) {
-  // Update pressure
-  if (weather.pressure) {
-    document.getElementById('pressureValue').textContent = `${weather.pressure.toFixed(0)}`;
+  console.log('Updating global weather display in farming dashboard with:', weather);
+  
+  if (!weather) {
+    console.warn('No weather data provided to updateGlobalWeatherDisplay');
+    return;
   }
   
-  // Update wind
-  if (weather.wind_speed && weather.wind_direction) {
-    document.getElementById('windSpeed').textContent = `${weather.wind_speed.toFixed(1)} km/h`;
-    document.getElementById('windDirectionText').textContent = getWindDirection(weather.wind_direction);
-    
-    // Update wind arrow
-    const windArrow = document.getElementById('windArrow');
-    if (windArrow) {
-      windArrow.style.transform = `rotate(${weather.wind_direction}deg)`;
+  try {
+    // Update pressure
+    if (weather.pressure) {
+      const pressureElement = document.getElementById('pressureValue');
+      if (pressureElement) {
+        pressureElement.textContent = `${weather.pressure.toFixed(0)}`;
+      }
+      
+      // Update pressure trend
+      const trendElement = document.getElementById('pressureTrendText');
+      if (trendElement) {
+        trendElement.textContent = weather.pressure_trend || 'Stable';
+      }
     }
-  }
-  
-  // Update UV index
-  if (weather.uv_index) {
-    document.getElementById('uvValue').textContent = weather.uv_index.toFixed(1);
-    document.getElementById('uvLevel').textContent = getUVLevel(weather.uv_index);
+    
+    // Update wind information
+    if (weather.wind_speed !== undefined && weather.wind_direction !== undefined) {
+      const windSpeedElement = document.getElementById('windSpeed');
+      if (windSpeedElement) {
+        windSpeedElement.textContent = `${weather.wind_speed.toFixed(1)} km/h`;
+      }
+      
+      const windDirectionElement = document.getElementById('windDirectionText');
+      if (windDirectionElement) {
+        windDirectionElement.textContent = getWindDirection(weather.wind_direction);
+      }
+      
+      // Update wind arrow
+      const windArrow = document.getElementById('windArrow');
+      if (windArrow) {
+        windArrow.style.transform = `rotate(${weather.wind_direction}deg)`;
+      }
+    }
+    
+    // Update UV index
+    if (weather.uv_index !== undefined) {
+      const uvValueElement = document.getElementById('uvValue');
+      if (uvValueElement) {
+        uvValueElement.textContent = weather.uv_index.toFixed(1);
+      }
+      
+      const uvLevelElement = document.getElementById('uvLevel');
+      if (uvLevelElement) {
+        uvLevelElement.textContent = getUVLevel(weather.uv_index);
+      }
+    }
+    
+    // Update air quality if available (or calculate from weather conditions)
+    let aqiValue = 50; // Default moderate
+    if (weather.air_quality && weather.air_quality.aqi) {
+      aqiValue = weather.air_quality.aqi;
+    } else {
+      // Calculate AQI estimate based on weather conditions
+      const precipitation = weather.rainfall || weather.precipitation || 0;
+      const windSpeed = weather.wind_speed || 0;
+      const humidity = weather.humidity || 60;
+      
+      if (precipitation > 2) aqiValue = 30; // Rain improves air quality
+      else if (windSpeed > 10) aqiValue = 40; // Wind disperses pollution
+      else if (humidity > 80) aqiValue = 60; // High humidity can trap pollutants
+      
+      console.log('🌦️ [AQI CALC] Calculated AQI:', aqiValue, 'from precipitation:', precipitation, 'wind:', windSpeed, 'humidity:', humidity);
+    }
+    
+    const aqiValueElement = document.getElementById('aqiValue');
+    if (aqiValueElement) {
+      aqiValueElement.textContent = Math.round(aqiValue);
+      console.log('🌦️ [AQI UPDATE] Updated AQI element to:', Math.round(aqiValue));
+    } else {
+      console.error('🌦️ [AQI ERROR] aqiValue element not found!');
+    }
+    
+    const aqiStatusElement = document.getElementById('aqiStatus');
+    if (aqiStatusElement) {
+      const aqiStatus = getAQIStatus(aqiValue);
+      aqiStatusElement.textContent = aqiStatus;
+      console.log('🌦️ [AQI UPDATE] Updated AQI status to:', aqiStatus);
+    } else {
+      console.error('🌦️ [AQI ERROR] aqiStatus element not found!');
+    }
+    
+    // Update soil conditions
+    if (weather.soil_temperature !== undefined) {
+      const soilTempElement = document.getElementById('soilTemp');
+      if (soilTempElement) {
+        soilTempElement.textContent = `${weather.soil_temperature.toFixed(1)}°C`;
+      }
+    }
+    
+    if (weather.soil_moisture !== undefined) {
+      const soilMoistureElement = document.getElementById('soilMoisture');
+      if (soilMoistureElement) {
+        soilMoistureElement.textContent = `${weather.soil_moisture.toFixed(1)}%`;
+      }
+    }
+    
+    // Update growing degree days
+    if (weather.growing_degree_days !== undefined) {
+      const gddElement = document.getElementById('gddValue');
+      if (gddElement) {
+        gddElement.textContent = weather.growing_degree_days.toFixed(1);
+      }
+    }
+    
+    // Update heat index
+    if (weather.heat_index !== undefined) {
+      const heatIndexElement = document.getElementById('heatIndexValue');
+      if (heatIndexElement) {
+        heatIndexElement.textContent = `${weather.heat_index.toFixed(1)}°C`;
+      }
+      
+      const heatIndexLevelElement = document.getElementById('heatIndexLevel');
+      if (heatIndexLevelElement) {
+        heatIndexLevelElement.textContent = getHeatIndexLevel(weather.heat_index);
+      }
+    }
+    
+    // Update moon phase if available
+    if (weather.moon_phase) {
+      const moonIconElement = document.getElementById('moonIcon');
+      if (moonIconElement) {
+        moonIconElement.textContent = weather.moon_phase;
+      }
+    }
+    
+    if (weather.moon_illumination !== undefined) {
+      const moonIlluminationElement = document.getElementById('moonIllumination');
+      if (moonIlluminationElement) {
+        moonIlluminationElement.textContent = `${weather.moon_illumination}% visible`;
+      }
+    }
+    
+    console.log('Global weather display updated successfully');
+    
+  } catch (error) {
+    console.error('Error updating global weather display:', error);
   }
 }
 
@@ -964,6 +1219,105 @@ function getUVLevel(uvIndex) {
   if (uvIndex <= 7) return 'High';
   if (uvIndex <= 10) return 'Very High';
   return 'Extreme';
+}
+
+// Helper function to update all humidity displays
+function updateAllHumidityDisplays(humidity) {
+  console.log('💧 [HUMIDITY UPDATE] Updating all humidity displays to:', humidity + '%');
+  
+  // Update main humidity card
+  const humidityMainElement = document.getElementById('humidity');
+  if (humidityMainElement) {
+    humidityMainElement.textContent = `${humidity}%`;
+    console.log('💧 [HUMIDITY] Updated main humidity card');
+  }
+  
+  // Update humidity circle progress
+  const humidityProgressElement = document.getElementById('humidityProgress');
+  const humidityTextElement = document.getElementById('humidityText');
+  if (humidityProgressElement && humidityTextElement) {
+    const circumference = 2 * Math.PI * 35; // radius is 35
+    const offset = circumference - (humidity / 100) * circumference;
+    
+    // Animate the change
+    setTimeout(() => {
+      humidityProgressElement.style.strokeDashoffset = offset;
+      humidityTextElement.textContent = `${humidity}%`;
+      console.log('💧 [HUMIDITY] Updated humidity circle progress');
+    }, 200);
+  }
+  
+  // Update any other humidity elements
+  const humidityElements = document.querySelectorAll('[id*="humidity"], [class*="humidity"]');
+  humidityElements.forEach((element, index) => {
+    if (element.id && !element.id.includes('Status') && !element.id.includes('Progress') && !element.id.includes('Text')) {
+      if (element.textContent !== `${humidity}%`) {
+        element.textContent = `${humidity}%`;
+        console.log('💧 [HUMIDITY] Updated additional humidity element:', element.id);
+      }
+    }
+  });
+}
+
+// Helper function to update all AQI displays
+function updateAllAQIDisplays(weather) {
+  console.log('🍃 [AQI UPDATE] Updating all AQI displays with weather:', weather);
+  
+  // Calculate AQI from weather conditions
+  const precipitation = weather.rainfall || weather.precipitation || 0;
+  const windSpeed = weather.wind_speed || 0;
+  const humidity = weather.humidity || 60;
+  
+  let aqiValue = 50; // Default moderate
+  if (precipitation > 2) aqiValue = 30; // Rain improves air quality
+  else if (windSpeed > 10) aqiValue = 40; // Wind disperses pollution
+  else if (humidity > 80) aqiValue = 60; // High humidity can trap pollutants
+  
+  console.log('🍃 [AQI CALC] Calculated AQI:', aqiValue, 'from conditions - precipitation:', precipitation, 'wind:', windSpeed, 'humidity:', humidity);
+  
+  // Update AQI value
+  const aqiValueElement = document.getElementById('aqiValue');
+  if (aqiValueElement) {
+    aqiValueElement.textContent = Math.round(aqiValue);
+    console.log('🍃 [AQI] Updated AQI value element');
+  }
+  
+  // Update AQI status
+  const aqiStatusElement = document.getElementById('aqiStatus');
+  if (aqiStatusElement) {
+    const aqiStatus = getAQIStatus(aqiValue);
+    aqiStatusElement.textContent = aqiStatus;
+    console.log('🍃 [AQI] Updated AQI status element to:', aqiStatus);
+  }
+  
+  // Update any AQI circles or gauges
+  const aqiCircleElement = document.getElementById('aqiCircle');
+  if (aqiCircleElement) {
+    // Update circle progress based on AQI
+    const circumference = 2 * Math.PI * 40; // assuming radius 40
+    const offset = circumference - (aqiValue / 100) * circumference;
+    aqiCircleElement.style.strokeDashoffset = offset;
+    console.log('🍃 [AQI] Updated AQI circle gauge');
+  }
+}
+
+// Helper function to get AQI status
+function getAQIStatus(aqi) {
+  if (aqi <= 50) return 'Good';
+  if (aqi <= 100) return 'Moderate';
+  if (aqi <= 150) return 'Unhealthy for Sensitive';
+  if (aqi <= 200) return 'Unhealthy';
+  if (aqi <= 300) return 'Very Unhealthy';
+  return 'Hazardous';
+}
+
+// Helper function to get heat index level
+function getHeatIndexLevel(heatIndex) {
+  if (heatIndex < 27) return 'Comfortable';
+  if (heatIndex < 32) return 'Caution';
+  if (heatIndex < 41) return 'Extreme Caution';
+  if (heatIndex < 54) return 'Danger';
+  return 'Extreme Danger';
 }
 
 // Update basic recommendations for global locations
@@ -1007,7 +1361,7 @@ function clearCropsAndAlerts() {
   
   const alertsContainer = document.getElementById('farmingAlerts');
   if (alertsContainer) {
-    alertsContainer.innerHTML = '<div class="global-message"><i class="fas fa-info-circle"></i><p>Farming alerts not available for this location.</p></div>';
+    alertsContainer.innerHTML = ''; // Remove the warning message
   }
 }
 
@@ -1045,16 +1399,36 @@ function showNotification(message, type = 'info') {
 
 // Setup event listeners
 function setupEventListeners() {
+  // Ensure DOM elements exist before adding listeners
+  if (!cropSelect || !stageSelect) {
+    console.error('Critical DOM elements not found during setup');
+    return;
+  }
+  
   cropSelect.addEventListener('change', () => {
     currentCrop = cropSelect.value;
     console.log(`Crop changed to: ${currentCrop}`);
-    loadFarmingDashboard();
+    
+    // If we have location data, use global weather; otherwise use local dashboard
+    if (currentLocationData) {
+      console.log('Using global location data for crop change:', currentLocationData);
+      loadGlobalLocationWeather(currentLocationData);
+    } else {
+      loadFarmingDashboard();
+    }
   });
   
   stageSelect.addEventListener('change', () => {
     currentStage = stageSelect.value;
     console.log(`Growth stage changed to: ${currentStage}`);
-    loadFarmingDashboard();
+    
+    // If we have location data, use global weather; otherwise use local dashboard
+    if (currentLocationData) {
+      console.log('Using global location data for stage change:', currentLocationData);
+      loadGlobalLocationWeather(currentLocationData);
+    } else {
+      loadFarmingDashboard();
+    }
   });
 }
 
@@ -1286,33 +1660,76 @@ function getCropIcon(cropName) {
   };
   return icons[cropName.toLowerCase()] || '🌱';
 }
+
+// Get stage icon by name
+function getStageIcon(stageName) {
+  const icons = {
+    'seedling': '🌱',
+    'vegetative': '🌿',
+    'flowering': '🌸',
+    'fruiting': '🍎',
+    'harvest': '🌾'
+  };
+  return icons[stageName.toLowerCase()] || '🌿';
+}
 function updateDashboard(data) {
   console.log('🎓 [DEBUG] updateDashboard called with data:', data);
+  
+  let successfulUpdates = 0;
+  let totalUpdates = 0;
   
   try {
     console.log('🎓 [DEBUG] Starting dashboard update process');
     
     // Update weather summary
+    totalUpdates++;
     if (data.weather && data.selected_crop && data.selected_crop.recommendations) {
-      console.log('🎓 [DEBUG] Updating weather summary');
-      updateWeatherSummary(data.weather, data.selected_crop.recommendations);
+      try {
+        console.log('🎓 [DEBUG] Updating weather summary');
+        updateWeatherSummary(data.weather, data.selected_crop.recommendations);
+        successfulUpdates++;
+        console.log('🎓 [SUCCESS] Weather summary updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update weather summary:', error);
+      }
     } else {
       console.warn('🎓 [WARN] Missing weather or recommendations data for weather summary');
     }
     
     // Update comprehensive weather display
+    totalUpdates++;
     if (data.weather) {
-      console.log('🎓 [DEBUG] Updating comprehensive weather display');
-      updateComprehensiveWeatherDisplay(data.weather);
-      updateComprehensiveWeatherScene(data.weather);
+      try {
+        console.log('🎓 [DEBUG] Updating comprehensive weather display with data:', {
+          temperature: data.weather.temperature,
+          humidity: data.weather.humidity,
+          rainfall: data.weather.rainfall,
+          pressure: data.weather.pressure,
+          wind_speed: data.weather.wind_speed,
+          uv_index: data.weather.uv_index
+        });
+        updateComprehensiveWeatherFromBasicData(data.weather);
+        updateComprehensiveWeatherScene(data.weather);
+        successfulUpdates++;
+        console.log('🎓 [SUCCESS] Comprehensive weather display updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update comprehensive weather display:', error);
+      }
     } else {
       console.warn('🎓 [WARN] Missing weather data for comprehensive display');
     }
     
     // Update overall condition
+    totalUpdates++;
     if (data.selected_crop && data.selected_crop.recommendations && data.selected_crop.recommendations.conditions) {
-      console.log('🎓 [DEBUG] Updating overall condition with:', data.selected_crop.recommendations.conditions);
-      updateOverallCondition(data.selected_crop.recommendations.conditions);
+      try {
+        console.log('🎓 [DEBUG] Updating overall condition with:', data.selected_crop.recommendations.conditions);
+        updateOverallCondition(data.selected_crop.recommendations.conditions);
+        successfulUpdates++;
+        console.log('🎓 [SUCCESS] Overall condition updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update overall condition:', error);
+      }
     } else {
       console.warn('🎓 [WARN] Missing conditions data for overall condition');
     }
@@ -1323,9 +1740,21 @@ function updateDashboard(data) {
     }
     
     // Update recommendations - this is the Smart Recommendations section
+    totalUpdates++;
     if (data.selected_crop && data.selected_crop.recommendations) {
-      console.log('🎓 [DEBUG] Updating recommendations with:', data.selected_crop.recommendations);
-      updateRecommendations(data.selected_crop.recommendations);
+      try {
+        console.log('🎓 [DEBUG] Updating recommendations with:', data.selected_crop.recommendations);
+        updateRecommendations(data.selected_crop.recommendations);
+        successfulUpdates++;
+        console.log('🎓 [SUCCESS] Recommendations updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update recommendations:', error);
+        // Show fallback recommendations
+        const grid = document.getElementById('recommendationGrid');
+        if (grid) {
+          grid.innerHTML = '<div class="error-message"><i class="fas fa-exclamation-triangle"></i><p>Unable to load recommendations. Please refresh the page.</p></div>';
+        }
+      }
     } else {
       console.warn('🎓 [WARN] Missing recommendations data');
       // Show fallback recommendations
@@ -1339,9 +1768,24 @@ function updateDashboard(data) {
     }
     
     // Update irrigation advice - this is the Water Management section
+    totalUpdates++;
     if (data.selected_crop && data.selected_crop.recommendations && data.selected_crop.recommendations.irrigation) {
-      console.log('🎓 [DEBUG] Updating irrigation with:', data.selected_crop.recommendations.irrigation);
-      updateIrrigation(data.selected_crop.recommendations.irrigation);
+      try {
+        console.log('🎓 [DEBUG] Updating irrigation with:', data.selected_crop.recommendations.irrigation);
+        updateIrrigation(data.selected_crop.recommendations.irrigation);
+        successfulUpdates++;
+        console.log('🎓 [SUCCESS] Irrigation updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update irrigation:', error);
+        // Show fallback irrigation
+        const card = document.getElementById('irrigationCard');
+        if (card) {
+          const content = card.querySelector('.irrigation-content');
+          if (content) {
+            content.innerHTML = '<h3>Irrigation Status</h3><p>Unable to load irrigation recommendations. Please refresh the page.</p>';
+          }
+        }
+      }
     } else {
       console.warn('🎓 [WARN] Missing irrigation data');
       // Show fallback irrigation
@@ -1359,32 +1803,53 @@ function updateDashboard(data) {
       }
     }
     
-    // Update suitable crops
+    // Update suitable crops (optional - won't cause warning if missing)
     if (data.suitable_crops && Array.isArray(data.suitable_crops)) {
-      console.log('🎓 [DEBUG] Updating suitable crops with:', data.suitable_crops.length, 'crops');
-      updateSuitableCrops(data.suitable_crops);
+      try {
+        console.log('🎓 [DEBUG] Updating suitable crops with:', data.suitable_crops.length, 'crops');
+        updateSuitableCrops(data.suitable_crops);
+        console.log('🎓 [SUCCESS] Suitable crops updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update suitable crops:', error);
+      }
     } else {
       console.warn('🎓 [WARN] Missing suitable crops data');
     }
     
-    // Update farming alerts
+    // Update farming alerts (optional - won't cause warning if missing)
     if (data.farming_alerts !== undefined) {
-      console.log('🎓 [DEBUG] Updating farming alerts with:', data.farming_alerts);
-      updateFarmingAlerts(data.farming_alerts);
+      try {
+        console.log('🎓 [DEBUG] Updating farming alerts with:', data.farming_alerts);
+        updateFarmingAlerts(data.farming_alerts);
+        console.log('🎓 [SUCCESS] Farming alerts updated');
+      } catch (error) {
+        console.error('🎓 [ERROR] Failed to update farming alerts:', error);
+      }
     } else {
       console.warn('🎓 [WARN] Missing farming alerts data');
     }
     
-    console.log('🎓 [DEBUG] Dashboard updated successfully');
+    console.log(`🎓 [SUCCESS] Dashboard updated successfully (${successfulUpdates}/${totalUpdates} sections)`);
+    
+    // Only show warning if critical sections failed (less than 60% success rate)
+    if (successfulUpdates < totalUpdates * 0.6) {
+      console.warn(`🎓 [WARN] Some dashboard sections failed to load (${successfulUpdates}/${totalUpdates} successful)`);
+      showNotification('Some dashboard sections may not have loaded properly. Please refresh if needed.', 'warning', 4000);
+    } else {
+      // Show success notification for global locations after successful update
+      if (data.is_global_location && successfulUpdates > 0) {
+        showNotification(`✅ Dashboard updated successfully for ${data.city.name || currentCity}`, 'success', 3000);
+      }
+    }
     
     // Auto-load AI analysis for the current location (optional - can be manual)
     // Uncomment the line below to automatically run AI analysis when dashboard loads
     // setTimeout(() => loadAIAnalysis(), 2000);
     
   } catch (error) {
-    console.error('🎓 [ERROR] Error updating dashboard:', error);
+    console.error('🎓 [ERROR] Critical error updating dashboard:', error);
     console.error('🎓 [ERROR] Error stack:', error.stack);
-    showNotification('Some dashboard sections may not have loaded properly', 'warning', 3000);
+    showNotification('Dashboard update failed. Please refresh the page.', 'error', 5000);
   }
 }
 
@@ -1396,9 +1861,25 @@ function updateWeatherSummary(weather, recommendations) {
   updateTemperatureVisual(weather.temperature, recommendations.crop);
   
   // Humidity
-  document.getElementById('humidity').textContent = `${weather.humidity}%`;
+  const humidityElement = document.getElementById('humidity');
+  if (humidityElement) {
+    humidityElement.textContent = `${weather.humidity}%`;
+    console.log('🎓 [HUMIDITY] Updated humidity text to:', weather.humidity + '%');
+  }
+  
   updateStatusDisplay('humidityStatus', recommendations.conditions.humidity);
   updateHumidityVisual(weather.humidity);
+  
+  // Also update any comprehensive humidity displays
+  const humidityProgressElement = document.getElementById('humidityProgress');
+  const humidityTextElement = document.getElementById('humidityText');
+  if (humidityProgressElement && humidityTextElement) {
+    const circumference = 2 * Math.PI * 35; // radius is 35
+    const offset = circumference - (weather.humidity / 100) * circumference;
+    humidityProgressElement.style.strokeDashoffset = offset;
+    humidityTextElement.textContent = `${weather.humidity}%`;
+    console.log('🎓 [HUMIDITY] Updated comprehensive humidity display to:', weather.humidity + '%');
+  }
   
   // Rainfall
   document.getElementById('rainfall').textContent = `${weather.rainfall} mm/h`;
@@ -1486,26 +1967,38 @@ function updateRecommendations(recommendations) {
   let cardCount = 0;
   
   // Temperature recommendation
-  if (recommendations.conditions && recommendations.conditions.temperature && recommendations.conditions.temperature.action) {
+  if (recommendations.conditions && recommendations.conditions.temperature) {
+    const tempRec = recommendations.conditions.temperature;
     addRecommendationCard(grid, '🌡️', 'Temperature Management', 
-      recommendations.conditions.temperature.message, 
-      recommendations.conditions.temperature.action);
+      tempRec.message || 'Temperature conditions detected', 
+      tempRec.action || tempRec.status || 'Monitor temperature levels');
     cardCount++;
   }
   
   // Humidity recommendation
-  if (recommendations.conditions && recommendations.conditions.humidity && recommendations.conditions.humidity.action) {
+  if (recommendations.conditions && recommendations.conditions.humidity) {
+    const humidityRec = recommendations.conditions.humidity;
     addRecommendationCard(grid, '💧', 'Humidity Control', 
-      recommendations.conditions.humidity.message, 
-      recommendations.conditions.humidity.action);
+      humidityRec.message || 'Humidity conditions detected', 
+      humidityRec.action || humidityRec.status || 'Monitor humidity levels');
     cardCount++;
   }
   
   // Water/Rainfall recommendation
-  if (recommendations.conditions && recommendations.conditions.water && recommendations.conditions.water.action) {
+  if (recommendations.conditions && recommendations.conditions.water) {
+    const waterRec = recommendations.conditions.water;
     addRecommendationCard(grid, '🌧️', 'Water Management', 
-      recommendations.conditions.water.message, 
-      recommendations.conditions.water.action);
+      waterRec.message || 'Water conditions detected', 
+      waterRec.action || waterRec.status || 'Monitor water levels');
+    cardCount++;
+  }
+  
+  // Irrigation recommendation (from irrigation section)
+  if (recommendations.irrigation) {
+    const irrigation = recommendations.irrigation;
+    addRecommendationCard(grid, irrigation.icon || '💧', 'Irrigation Advice', 
+      irrigation.message || 'Irrigation recommendations available', 
+      `Frequency: ${irrigation.frequency || 'as needed'} | Urgency: ${irrigation.urgency || 'medium'}`);
     cardCount++;
   }
   
@@ -3303,30 +3796,48 @@ function addAtmosphericParticles(container, humidity) {
   }
 }
 
-// Call initialization when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Farming Dashboard initialized');
+// Main initialization function
+function initializeFarmingDashboard() {
+  console.log('Initializing Farming Dashboard...');
   
-  // Initialize weather visuals
-  initializeWeatherVisuals();
-  
-  // Load initial data
-  loadCities();
-  loadCropsData();
-  
-  // Start with Delhi as default
-  console.log('Loading farming dashboard for default city:', currentCity);
-  loadFarmingDashboard();
-  
-  // Setup event listeners
-  setupEventListeners();
-  
-  // Initialize WebSocket
-  initializeWebSocket();
-  
-  // Auto-refresh every 5 minutes
-  setInterval(loadFarmingDashboard, 5 * 60 * 1000);
-});
+  try {
+    // Initialize weather visuals first
+    initializeWeatherVisuals();
+    
+    // Setup event listeners with error handling
+    setupEventListeners();
+    
+    // Initialize WebSocket connection
+    initializeWebSocket();
+    
+    console.log('Farming Dashboard initialized successfully');
+    
+    // Load initial data with delay to ensure DOM is ready
+    setTimeout(() => {
+      // Load cities and crops data
+      loadCities();
+      loadCropsData();
+      
+      // Start with Delhi as default, but only if no location search is active
+      if (!currentLocationData) {
+        console.log('Loading farming dashboard for default city:', currentCity);
+        loadFarmingDashboard();
+      }
+      
+      // Setup auto-refresh every 5 minutes for dashboard data only
+      setInterval(() => {
+        if (!currentLocationData) {
+          loadFarmingDashboard();
+        }
+      }, 5 * 60 * 1000);
+      
+    }, 500); // 500ms delay to ensure DOM is fully ready
+    
+  } catch (error) {
+    console.error('Error during farming dashboard initialization:', error);
+    showNotification('Dashboard initialization failed. Please refresh the page.', 'error', 5000);
+  }
+}
 
 // =============== ML CROP RECOMMENDATIONS ===============
 
@@ -4159,9 +4670,10 @@ function initializeFarmingDashboard() {
   console.log('=== FARMING DASHBOARD INITIALIZED ===');
 }
 
-// Run when DOM is loaded
+// Initialize farming dashboard on page load
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeFarmingDashboard);
 } else {
+  // DOM is already loaded
   initializeFarmingDashboard();
 }

@@ -558,6 +558,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Log current city for debugging
   console.log('Current city on load:', currentCity);
   
+  // Load initial weather data
+  fetchCurrentWeather(currentCity);
+  
   // Add smooth scroll behavior
   document.documentElement.style.scrollBehavior = 'smooth';
   
@@ -1033,10 +1036,27 @@ function updateGlobalWeatherDisplay(weatherData, location) {
   // Update agricultural data if available
   if (current.soil_temperature_surface !== undefined) {
     animateValueChange('soilTemp', `${current.soil_temperature_surface.toFixed(1)}°C`);
+  } else {
+    // Calculate soil temperature from air temperature (approximate)
+    const soilTemp = current.temperature - 5;
+    animateValueChange('soilTemp', `${soilTemp.toFixed(1)}°C`);
   }
+  
   if (current.soil_moisture_surface !== undefined) {
     animateValueChange('soilMoisture', `${(current.soil_moisture_surface * 100).toFixed(1)}%`);
+  } else {
+    // Calculate soil moisture from humidity and precipitation
+    const soilMoisture = Math.min(100, current.humidity + (current.precipitation || 0) * 5);
+    animateValueChange('soilMoisture', `${soilMoisture.toFixed(1)} m³/m³`);
   }
+  
+  // Calculate and update evapotranspiration
+  const evapotranspiration = calculateEvapotranspiration(current.temperature, current.humidity, current.wind_speed || 0);
+  animateValueChange('evapotranspiration', `${evapotranspiration.toFixed(1)} mm`);
+  
+  // Calculate precipitation probability for next 24 hours
+  const precipProb = calculatePrecipitationProbability(current.humidity, current.pressure || 1013);
+  animateValueChange('precipitationProb', `${precipProb}%`);
   
   // Update forecast data
   if (hourly && hourly.length > 0) {
@@ -1288,7 +1308,40 @@ function showDailyForecast() {
 
 // =============== GLOBAL LOCATION SEARCH FUNCTIONS END ===============
 
+// =============== AGRICULTURAL CALCULATIONS ===============
 
+// Calculate evapotranspiration using simplified Penman-Monteith equation
+function calculateEvapotranspiration(temperature, humidity, windSpeed) {
+  // Simplified calculation for reference evapotranspiration (ET0)
+  const delta = 4098 * (0.6108 * Math.exp(17.27 * temperature / (temperature + 237.3))) / Math.pow(temperature + 237.3, 2);
+  const gamma = 0.665; // psychrometric constant (simplified)
+  const u2 = windSpeed * 4.87 / Math.log(67.8 * 10 - 5.42); // wind speed at 2m
+  const es = 0.6108 * Math.exp(17.27 * temperature / (temperature + 237.3));
+  const ea = es * humidity / 100;
+  
+  // Simplified daily ET0 calculation
+  const et0 = (0.408 * delta * (temperature - 0) + gamma * 900 / (temperature + 273) * u2 * (es - ea)) / (delta + gamma * (1 + 0.34 * u2));
+  
+  return Math.max(0, et0);
+}
+
+// Calculate precipitation probability based on humidity and pressure
+function calculatePrecipitationProbability(humidity, pressure) {
+  let probability = 0;
+  
+  // Base probability from humidity
+  if (humidity > 80) probability += 60;
+  else if (humidity > 60) probability += 30;
+  else if (humidity > 40) probability += 10;
+  
+  // Adjust based on pressure
+  if (pressure < 1000) probability += 25; // Low pressure increases chance
+  else if (pressure < 1010) probability += 10;
+  else if (pressure > 1020) probability -= 15; // High pressure decreases chance
+  
+  // Cap between 0 and 95%
+  return Math.min(95, Math.max(0, Math.round(probability)));
+}
 
 // Load ML weather predictions for current city
 async function loadWeatherPredictions() {

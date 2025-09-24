@@ -1,0 +1,12 @@
+{
+  "cropId": "rice",
+  "farmSize": 2,
+  "inputSelections": {
+    "organicFertilizer": true
+  },
+  "weatherData": {
+    "temperature": 27,
+    "humidity": 80,
+    "rainfall": 150
+  }
+}

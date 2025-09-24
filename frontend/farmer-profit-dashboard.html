@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClimateSync - Farmer Profit Calculator</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="farming.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="profit-dashboard.css">
+</head>
+<body class="profit-dashboard">
+  <!-- Navigation -->
+  <nav class="navigation">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <i class="fas fa-calculator"></i>
+        <span>Farmer Profit Calculator</span>
+      </div>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">
+          <i class="fas fa-cloud-sun"></i>
+          <span>Weather Dashboard</span>
+        </a>
+        <a href="farming.html" class="nav-link">
+          <i class="fas fa-tractor"></i>
+          <span>Farming Dashboard</span>
+        </a>
+        <a href="farmer-profit-dashboard.html" class="nav-link active">
+          <i class="fas fa-calculator"></i>
+          <span>Profit Calculator</span>
+        </a>
+        <a href="alerts.html" class="nav-link">
+          <i class="fas fa-bell"></i>
+          <span>Alerts</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="profit-container">
+    <!-- Header -->
+    <div class="profit-header">
+      <h1>🌾 Smart Farmer Profit Calculator</h1>
+      <p>Predict yields, calculate returns, and optimize your farming decisions with AI-powered insights</p>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <div class="dashboard-grid">
+      <!-- Input Panel -->
+      <div class="input-panel">
+        <div class="card-header">
+          <div class="card-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+            <i class="fas fa-seedling"></i>
+          </div>
+          <h2 class="card-title">Farming Inputs</h2>
+        </div>
+
+        <form id="profitCalculatorForm">
+          <!-- Location Input -->
+          <div class="form-group">
+            <label class="form-label">📍 Farm Location</label>
+            <div class="location-search-container">
+              <div class="search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="locationSearch" class="form-input" placeholder="Search any city, village, or location..." autocomplete="off">
+                <button type="button" id="searchBtn" class="search-btn farming-search-btn">
+                  <i class="fas fa-globe"></i>
+                  <span>Search</span>
+                </button>
+              </div>
+              <div id="searchResults" class="search-results" style="display: none;"></div>
+            </div>
+          </div>
+
+          <!-- Crop Selection -->
+          <div class="form-group">
+            <label class="form-label">🌾 Select Crop</label>
+            <select id="cropSelect" class="form-select" required>
+              <option value="">Choose a crop...</option>
+              <option value="rice">🌾 Rice (धान)</option>
+              <option value="wheat">🌾 Wheat (गेहूं)</option>
+              <option value="cotton">🌿 Cotton (कपास)</option>
+              <option value="sugarcane">🎋 Sugarcane (गन्ना)</option>
+              <option value="tomato">🍅 Tomato (टमाटर)</option>
+              <option value="onion">🧅 Onion (प्याज)</option>
+              <option value="maize">🌽 Maize (मक्का)</option>
+              <option value="soybean">🫘 Soybean (सोयाबीन)</option>
+            </select>
+          </div>
+
+          <!-- Farm Size -->
+          <div class="form-group">
+            <label class="form-label">📏 Farm Size (Hectares)</label>
+            <input type="number" id="farmSize" class="form-input" min="0.1" max="1000" step="0.1" value="1" required>
+          </div>
+
+          <!-- Investment Inputs -->
+          <div class="form-group">
+            <label class="form-label">💰 Investment Options</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" id="organicFertilizer">
+                <label for="organicFertilizer">Organic Fertilizer</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="micronutrients">
+                <label for="micronutrients">Micronutrients</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="advancedPestControl">
+                <label for="advancedPestControl">Advanced Pest Control</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="biologicalPestControl">
+                <label for="biologicalPestControl">Biological Pest Control</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Irrigation Type -->
+          <div class="form-group">
+            <label class="form-label">💧 Irrigation Method</label>
+            <select id="irrigationType" class="form-select">
+              <option value="flood">Flood Irrigation (Traditional)</option>
+              <option value="sprinkler">Sprinkler Irrigation</option>
+              <option value="drip">Drip Irrigation (Most Efficient)</option>
+            </select>
+          </div>
+
+          <!-- Advanced Options -->
+          <div class="advanced-options">
+            <button type="button" class="advanced-toggle" id="advancedToggle">
+              <i class="fas fa-chevron-right"></i>
+              Advanced Options
+            </button>
+            <div id="advancedContent" style="display: none;">
+              <div class="input-grid">
+                <div class="form-group">
+                  <label class="form-label">🎯 Management Level</label>
+                  <select id="managementLevel" class="form-select">
+                    <option value="0.8">Basic (80%)</option>
+                    <option value="1.0" selected>Standard (100%)</option>
+                    <option value="1.2">Advanced (120%)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">📈 Market Price Adjustment (%)</label>
+                  <input type="number" id="marketPriceAdjustment" class="form-input" min="-50" max="50" step="5" value="0">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calculate Button -->
+          <button type="submit" class="calculate-btn" id="calculateBtn">
+            <i class="fas fa-calculator"></i>
+            Calculate Profit Prediction
+          </button>
+        </form>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="results-panel">
+        <!-- Summary Cards -->
+        <div class="profit-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h2 class="card-title">Profit Summary</h2>
+          </div>
+          
+          <div id="summaryContent">
+            <div class="summary-cards">
+              <div class="summary-card">
+                <div class="summary-value" id="totalRevenue">₹0</div>
+                <div class="summary-label">Gross Revenue</div>
+              </div>
+              <div class="summary-card cost">
+                <div class="summary-value" id="totalCosts">₹0</div>
+                <div class="summary-label">Total Costs</div>
+              </div>
+              <div class="summary-card profit">
+                <div class="summary-value" id="netProfit">₹0</div>
+                <div class="summary-label">Net Profit</div>
+              </div>
+              <div class="summary-card roi">
+                <div class="summary-value" id="roi">0%</div>
+                <div class="summary-label">Return on Investment</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Yield Prediction Chart -->
+        <div class="profit-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+              <i class="fas fa-seedling"></i>
+            </div>
+            <h2 class="card-title">Yield & Profit Analysis</h2>
+          </div>
+          
+          <div class="chart-container">
+            <canvas id="profitChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Scenario Comparison -->
+        <div class="profit-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+              <i class="fas fa-balance-scale"></i>
+            </div>
+            <h2 class="card-title">Scenario Analysis</h2>
+          </div>
+          
+          <div class="scenario-comparison" id="scenarioComparison">
+            <!-- Scenario cards will be populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Cost Breakdown Chart -->
+        <div class="profit-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: linear-gradient(135deg, #fc4a1a, #f7b733);">
+              <i class="fas fa-pie-chart"></i>
+            </div>
+            <h2 class="card-title">Cost Breakdown</h2>
+          </div>
+          
+          <div class="chart-container">
+            <canvas id="costChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="profit-card">
+          <div class="card-header">
+            <div class="card-icon" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">
+              <i class="fas fa-lightbulb"></i>
+            </div>
+            <h2 class="card-title">Smart Recommendations</h2>
+          </div>
+          
+          <div class="recommendations" id="recommendations">
+            <div class="recommendation-item info">
+              <div class="recommendation-icon">
+                <i class="fas fa-info-circle"></i>
+              </div>
+              <div class="recommendation-content">
+                <h4>Get Started</h4>
+                <p>Select a crop and enter your farm details to get personalized profit predictions and smart recommendations.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <p class="loading-text">Calculating profit predictions...</p>
+  </div>
+
+  <!-- Scripts -->
+  <script src="script.js"></script>
+  <script src="profit-dashboard.js"></script>
+</body>
+</html>

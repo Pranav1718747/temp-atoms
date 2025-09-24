@@ -23,6 +23,7 @@ const { router: alertRouter, initializeAlertRouter } = require('./routes/alerts'
 const { router: farmingRouter, initializeFarmingRouter } = require('./routes/farming');
 const { router: mlRouter, initializeMLRouter } = require('./routes/ml');
 const mlAdvancedRouter = require('./routes/ml-advanced');
+const profitPredictionRouter = require('./routes/profit-prediction');
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,7 @@ app.use('/api/alerts', alertRouter);
 app.use('/api/farming', farmingRouter);
 app.use('/api/ml', mlRouter);
 app.use('/api/ml-advanced', mlAdvancedRouter);
+app.use('/api/profit', profitPredictionRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -10,10 +10,19 @@ const ClimateDB = require('./database/db');
 const AlertService = require('./services/alertService');
 const FarmingService = require('./services/farmingService');
 const MLService = require('./ml/ml_service');
+const { 
+  initializeAdvancedML, 
+  getAdvancedWeatherPredictions,
+  getAdvancedCropRecommendations,
+  getAdvancedAlertPredictions,
+  getComprehensiveInsights,
+  getMLHealthStatus
+} = require('./ml-ts/bridge.js');
 const { router: weatherRouter, initializeRouter } = require('./routes/weather');
 const { router: alertRouter, initializeAlertRouter } = require('./routes/alerts');
 const { router: farmingRouter, initializeFarmingRouter } = require('./routes/farming');
 const { router: mlRouter, initializeMLRouter } = require('./routes/ml');
+const mlAdvancedRouter = require('./routes/ml-advanced');
 
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +44,7 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/alerts', alertRouter);
 app.use('/api/farming', farmingRouter);
 app.use('/api/ml', mlRouter);
+app.use('/api/ml-advanced', mlAdvancedRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -47,6 +57,17 @@ const climateDB = new ClimateDB();
 const alertService = new AlertService(climateDB, io);
 const farmingService = new FarmingService(climateDB);
 const mlService = new MLService(climateDB, climateAPI);
+
+// Initialize Advanced TypeScript ML Service
+let advancedMLInitialized = false;
+initializeAdvancedML(climateDB, climateAPI)
+  .then(() => {
+    advancedMLInitialized = true;
+    console.log('🚀 Advanced TypeScript ML Service initialized successfully!');
+  })
+  .catch((error) => {
+    console.error('❌ Failed to initialize Advanced TypeScript ML Service:', error);
+  });
 
 // Initialize route handlers with shared instances
 initializeRouter(climateAPI, climateDB);

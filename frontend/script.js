@@ -1,4 +1,4 @@
-const socket = io('http://localhost:4001');
+const socket = io('http://localhost:4002');
 
 // Global variables - no longer using citySelect since it's removed
 let currentCity = 'Delhi'; // Default city
@@ -14,7 +14,7 @@ let activeAlerts = new Map(); // Store active alerts to prevent duplicates
 async function loadCities() {
   try {
     console.log('Loading available cities...');
-    const response = await fetch('http://localhost:4001/api/weather/cities?limit=15');
+    const response = await fetch('http://localhost:4002/api/weather/cities?limit=15');
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -48,7 +48,7 @@ async function fetchCurrentWeather(city) {
     showLoading();
     
     console.log(`Fetching current weather for ${city}...`);
-    const response = await fetch(`http://localhost:4001/api/weather/current/${city}`);
+    const response = await fetch(`http://localhost:4002/api/weather/current/${city}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -92,7 +92,7 @@ async function fetchCurrentWeather(city) {
 async function fetchFromDatabase(city) {
   try {
     console.log(`Trying to fetch cached data for ${city}...`);
-    const response = await fetch(`http://localhost:4001/api/weather/latest/${city}`);
+    const response = await fetch(`http://localhost:4002/api/weather/latest/${city}`);
     
     if (response.ok) {
       const result = await response.json();
@@ -218,7 +218,7 @@ async function fetchCurrentWeatherQuiet(city) {
     
     try {
         console.log(`Quietly fetching current weather for ${city}...`);
-        const response = await fetch(`http://localhost:4001/api/weather/current/${city}`);
+        const response = await fetch(`http://localhost:4002/api/weather/current/${city}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -264,7 +264,7 @@ async function fetchCurrentWeatherQuiet(city) {
 async function fetchFromDatabaseQuiet(city) {
     try {
         console.log(`Trying to fetch cached data for ${city}...`);
-        const response = await fetch(`http://localhost:4001/api/weather/latest/${city}`);
+        const response = await fetch(`http://localhost:4002/api/weather/latest/${city}`);
         
         if (response.ok) {
             const result = await response.json();
@@ -699,7 +699,7 @@ function updateAlertPage(alert) {
 function checkAlerts() {
   if (currentCity) {
     // Get alerts from API
-    fetch(`http://localhost:4001/api/alerts/city/${currentCity}`)
+    fetch(`http://localhost:4002/api/alerts/city/${currentCity}`)
       .then(response => response.json())
       .then(data => {
         if (data.success && data.data) {
@@ -882,7 +882,7 @@ async function loadAlertsForCity(cityName) {
       return;
     }
     
-    const response = await fetch(`http://localhost:4001/api/alerts/city/${city.id}`);
+    const response = await fetch(`http://localhost:4002/api/alerts/city/${city.id}`);
     if (!response.ok) {
       if (response.status === 404) {
         console.log(`No alerts found for ${cityName}`);
@@ -1062,7 +1062,7 @@ async function performLocationSearch(query) {
     showLoading();
     console.log('Searching for location:', query);
     
-    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+    const response = await fetch(`http://localhost:4002/api/weather/search/${encodeURIComponent(query)}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -1092,7 +1092,7 @@ async function performLocationSearchQuiet(query) {
   try {
     console.log('Auto-searching for location:', query);
     
-    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+    const response = await fetch(`http://localhost:4002/api/weather/search/${encodeURIComponent(query)}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -1186,7 +1186,7 @@ async function fetchLocationWeather(location) {
     
     console.log('Fetching weather for location:', location);
     
-    const response = await fetch(`http://localhost:4001/api/weather/coordinates/${location.latitude}/${location.longitude}`);
+    const response = await fetch(`http://localhost:4002/api/weather/coordinates/${location.latitude}/${location.longitude}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -1656,7 +1656,7 @@ async function loadWeatherPredictions() {
   generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
   
   try {
-    const response = await fetch(`http://localhost:4001/api/ml/weather/${city}?days=7`);
+    const response = await fetch(`http://localhost:4002/api/ml/weather/${city}?days=7`);
     const data = await response.json();
 
     if (data.success) {

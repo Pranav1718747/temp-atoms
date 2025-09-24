@@ -289,7 +289,7 @@ async function startServer() {
     await fetchInitialWeather();
     
     // Start server
-    const PORT = process.env.PORT || 4001;
+    const PORT = process.env.PORT || 4002;
     server.listen(PORT, () => {
       console.log(`🌤️  ClimateSync Server running on port ${PORT}`);
       console.log(`📊 Dashboard: http://localhost:${PORT}`);

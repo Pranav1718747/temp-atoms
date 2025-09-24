@@ -6,6 +6,7 @@
   <title>ClimateSync - Farmer Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="farming.css">
+  <link rel="stylesheet" href="crop-growth-animations.css">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
@@ -26,6 +27,10 @@
         <a href="farming.html" class="nav-link active">
           <i class="fas fa-tractor"></i>
           Farming Dashboard
+        </a>
+        <a href="crop-animation-demo.html" class="nav-link">
+          <i class="fas fa-seedling"></i>
+          Crop Animations
         </a>
       </div>
     </div>
@@ -425,6 +430,52 @@
       </div>
     </section>
 
+    <!-- Crop Growth Animation -->    
+    <section class="crop-animation-section">
+      <div class="crop-animation-header">
+        <h2>🌱 Crop Growth Animation</h2>
+        <p>Watch how current weather conditions affect your crop's growth in real-time</p>
+        <div class="animation-controls-header">
+          <button class="animation-demo-btn" onclick="window.open('crop-animation-demo.html', '_blank')">
+            <i class="fas fa-external-link-alt"></i>
+            Full Animation Demo
+          </button>
+          <button class="animation-toggle-btn" id="cropAnimationToggle" onclick="toggleCropAnimation()">
+            <i class="fas fa-play"></i>
+            <span id="animationToggleText">Start Animation</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Embedded Crop Animation -->
+      <div class="crop-animation-embedded" id="cropGrowthAnimation">
+        <!-- Animation will be inserted here by JavaScript -->
+      </div>
+      
+      <!-- Quick Weather Impact Demo -->
+      <div class="weather-impact-demo">
+        <h3>🌦️ See How Weather Affects Growth</h3>
+        <div class="impact-demo-buttons">
+          <button class="impact-demo-btn optimal" onclick="demonstrateOptimalWeather()">
+            <i class="fas fa-sun"></i>
+            Optimal Conditions
+          </button>
+          <button class="impact-demo-btn rain" onclick="demonstrateRainEffect()">
+            <i class="fas fa-cloud-rain"></i>
+            Heavy Rainfall
+          </button>
+          <button class="impact-demo-btn drought" onclick="demonstrateDroughtEffect()">
+            <i class="fas fa-fire"></i>
+            Drought Stress
+          </button>
+          <button class="impact-demo-btn cold" onclick="demonstrateColdEffect()">
+            <i class="fas fa-snowflake"></i>
+            Cold Stress
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Farming Alerts -->
     <section class="farming-alerts-section">
       <h2>⚠️ Important Farming Alerts</h2>
@@ -497,5 +548,135 @@
   </div>
 
   <script src="farming.js"></script>
+  <script src="crop-growth-animator.js"></script>
+  <script>
+    // Integration functions for crop animation with farming dashboard
+    let isAnimationActive = false;
+    
+    function toggleCropAnimation() {
+      const toggleBtn = document.getElementById('cropAnimationToggle');
+      const toggleText = document.getElementById('animationToggleText');
+      
+      if (!isAnimationActive) {
+        // Initialize animation if not already done
+        if (!cropAnimator) {
+          cropAnimator = new CropGrowthAnimator('cropGrowthAnimation');
+        }
+        isAnimationActive = true;
+        toggleBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        toggleText.textContent = 'Pause Animation';
+        
+        // Update animation with current weather data
+        updateAnimationWithCurrentWeather();
+      } else {
+        if (cropAnimator) {
+          cropAnimator.toggleAnimation();
+        }
+        isAnimationActive = !cropAnimator.isAnimating;
+        toggleBtn.innerHTML = `<i class="fas fa-${cropAnimator.isAnimating ? 'pause' : 'play'}"></i>`;
+        toggleText.textContent = cropAnimator.isAnimating ? 'Pause Animation' : 'Resume Animation';
+      }
+    }
+    
+    function updateAnimationWithCurrentWeather() {
+      if (!cropAnimator) return;
+      
+      // Get current weather data from farming dashboard
+      const currentWeatherData = {
+        temperature: parseFloat(document.getElementById('temperature')?.textContent?.replace('°C', '')) || 25,
+        humidity: parseFloat(document.getElementById('humidity')?.textContent?.replace('%', '')) || 60,
+        rainfall: parseFloat(document.getElementById('rainfall')?.textContent?.replace(' mm', '')) || 0,
+        wind_speed: parseFloat(document.getElementById('windSpeed')?.textContent?.replace(' km/h', '')) || 5,
+        pressure: parseFloat(document.getElementById('pressureValue')?.textContent) || 1013,
+        soil_moisture: 50 // Default value, could be enhanced
+      };
+      
+      console.log('Updating crop animation with current weather:', currentWeatherData);
+      cropAnimator.updateFromWeatherData(currentWeatherData);
+      
+      // Update crop type if changed
+      const selectedCrop = document.getElementById('cropSelect')?.value || 'rice';
+      if (cropAnimator.currentCrop !== selectedCrop) {
+        cropAnimator.changeCrop(selectedCrop);
+      }
+    }
+    
+    // Weather effect demonstration functions
+    function demonstrateOptimalWeather() {
+      if (!cropAnimator) {
+        toggleCropAnimation();
+        setTimeout(() => demonstrateOptimalWeather(), 1000);
+        return;
+      }
+      
+      cropAnimator.simulateWeather('optimal');
+      showNotification('🌞 Demonstrating optimal weather conditions for crop growth', 'success', 3000);
+    }
+    
+    function demonstrateRainEffect() {
+      if (!cropAnimator) {
+        toggleCropAnimation();
+        setTimeout(() => demonstrateRainEffect(), 1000);
+        return;
+      }
+      
+      cropAnimator.simulateWeather('rain');
+      showNotification('🌧️ Demonstrating heavy rainfall effect on crops', 'info', 3000);
+    }
+    
+    function demonstrateDroughtEffect() {
+      if (!cropAnimator) {
+        toggleCropAnimation();
+        setTimeout(() => demonstrateDroughtEffect(), 1000);
+        return;
+      }
+      
+      cropAnimator.simulateWeather('drought');
+      showNotification('🔥 Demonstrating drought stress on crop growth', 'warning', 3000);
+    }
+    
+    function demonstrateColdEffect() {
+      if (!cropAnimator) {
+        toggleCropAnimation();
+        setTimeout(() => demonstrateColdEffect(), 1000);
+        return;
+      }
+      
+      cropAnimator.simulateWeather('cold');
+      showNotification('❄️ Demonstrating cold stress effect on crops', 'warning', 3000);
+    }
+    
+    // Auto-update animation when weather data changes
+    function onWeatherDataUpdate() {
+      if (isAnimationActive && cropAnimator) {
+        updateAnimationWithCurrentWeather();
+      }
+    }
+    
+    // Hook into existing weather update functions
+    const originalUpdateDashboard = window.updateDashboard;
+    window.updateDashboard = function(data) {
+      if (originalUpdateDashboard) {
+        originalUpdateDashboard(data);
+      }
+      
+      // Update animation after dashboard update
+      setTimeout(() => {
+        onWeatherDataUpdate();
+      }, 500);
+    };
+    
+    // Listen for crop selection changes
+    document.addEventListener('DOMContentLoaded', function() {
+      const cropSelect = document.getElementById('cropSelect');
+      if (cropSelect) {
+        cropSelect.addEventListener('change', function() {
+          if (cropAnimator) {
+            cropAnimator.changeCrop(this.value);
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>

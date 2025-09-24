@@ -4216,3 +4216,211 @@
 /* ==========================================================================
    END AI AGENTS STYLES
    ========================================================================== */
+
+/* ==========================================================================
+   CROP ANIMATION SECTION STYLES
+   ========================================================================== */
+
+/* Crop Animation Section Styles */
+.crop-animation-section {
+  margin: 30px 0;
+  background: linear-gradient(145deg, #ffffff, #f8f9fa);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border: 2px solid #e8f5e8;
+}
+
+.crop-animation-header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.crop-animation-header h2 {
+  color: #2E7D32;
+  font-size: 2em;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.crop-animation-header p {
+  color: #666;
+  font-size: 1.1em;
+  margin-bottom: 20px;
+}
+
+.animation-controls-header {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.animation-demo-btn,
+.animation-toggle-btn {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.animation-demo-btn:hover,
+.animation-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.animation-demo-btn {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.animation-demo-btn:hover {
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.crop-animation-embedded {
+  margin: 25px 0;
+  min-height: 400px;
+  background: linear-gradient(180deg, #87CEEB 0%, #90EE90 50%, #8B4513 100%);
+  border-radius: 15px;
+  overflow: hidden;
+  border: 3px solid #e0e0e0;
+  position: relative;
+}
+
+.crop-animation-embedded:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.crop-animation-embedded:empty::before {
+  content: "🌱 Click 'Start Animation' to begin crop growth visualization";
+}
+
+.weather-impact-demo {
+  background: linear-gradient(145deg, #f0f2f5, #e1e5ea);
+  border-radius: 15px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.weather-impact-demo h3 {
+  color: #2E7D32;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+.impact-demo-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.impact-demo-btn {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 15px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.impact-demo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.impact-demo-btn.optimal {
+  background: linear-gradient(45deg, #FF9800, #F57C00);
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.impact-demo-btn.optimal:hover {
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+}
+
+.impact-demo-btn.rain {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.impact-demo-btn.rain:hover {
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.impact-demo-btn.drought {
+  background: linear-gradient(45deg, #FF5722, #F44336);
+  box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
+}
+
+.impact-demo-btn.drought:hover {
+  box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+}
+
+.impact-demo-btn.cold {
+  background: linear-gradient(45deg, #607D8B, #455A64);
+  box-shadow: 0 4px 15px rgba(96, 125, 139, 0.3);
+}
+
+.impact-demo-btn.cold:hover {
+  box-shadow: 0 6px 20px rgba(96, 125, 139, 0.4);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .crop-animation-section {
+    padding: 20px;
+    margin: 20px 0;
+  }
+  
+  .crop-animation-header h2 {
+    font-size: 1.6em;
+  }
+  
+  .animation-controls-header {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .animation-demo-btn,
+  .animation-toggle-btn {
+    width: 100%;
+    max-width: 250px;
+  }
+  
+  .impact-demo-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .crop-animation-embedded {
+    min-height: 300px;
+  }
+}
+
+/* ==========================================================================
+   END CROP ANIMATION SECTION STYLES
+   ========================================================================== */

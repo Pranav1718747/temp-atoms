@@ -1,5 +1,5 @@
 // Farming Dashboard JavaScript
-const socket = io('http://localhost:4001');
+const socket = io('http://localhost:4002');
 
 // Global variables
 let currentCity = 'Delhi';
@@ -35,7 +35,7 @@ async function performLocationSearch(query) {
     showLoading();
     console.log('Searching for location:', query);
     
-    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+    const response = await fetch(`http://localhost:4002/api/weather/search/${encodeURIComponent(query)}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -65,7 +65,7 @@ async function performLocationSearchQuiet(query) {
   try {
     console.log('Auto-searching for location:', query);
     
-    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+    const response = await fetch(`http://localhost:4002/api/weather/search/${encodeURIComponent(query)}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -302,7 +302,7 @@ async function loadAIAnalysis() {
     
     const farmSize = document.getElementById('farmSizeInput')?.value || 1;
     const response = await fetch(
-      `http://localhost:4001/api/farming/ai-analysis/${encodeURIComponent(currentCity)}?crop=${currentCrop}&farmSize=${farmSize}`,
+      `http://localhost:4002/api/farming/ai-analysis/${encodeURIComponent(currentCity)}?crop=${currentCrop}&farmSize=${farmSize}`,
       {
         method: 'GET',
         headers: {
@@ -343,7 +343,7 @@ async function loadSpecificAgentAnalysis(agentName) {
     
     const farmSize = document.getElementById('farmSizeInput')?.value || 1;
     const response = await fetch(
-      `http://localhost:4001/api/farming/ai-agent/${agentName}/${encodeURIComponent(currentCity)}?crop=${currentCrop}&farmSize=${farmSize}`
+      `http://localhost:4002/api/farming/ai-agent/${agentName}/${encodeURIComponent(currentCity)}?crop=${currentCrop}&farmSize=${farmSize}`
     );
     
     if (!response.ok) {
@@ -636,6 +636,182 @@ function updateSpecificAgentDisplay(agentName, agentAnalysis) {
 
 // ===== END AI AGENTS FUNCTIONALITY =====
 
+// ===== CROP ANIMATION INTEGRATION =====
+
+// Weather data monitoring for crop animation updates
+let lastWeatherData = null;
+let weatherMonitoringInterval = null;
+
+// Start monitoring weather data changes for crop animation
+function startWeatherMonitoring() {
+  if (weatherMonitoringInterval) {
+    clearInterval(weatherMonitoringInterval);
+  }
+  
+  weatherMonitoringInterval = setInterval(() => {
+    if (window.cropAnimator && window.isAnimationActive) {
+      const currentWeatherData = getCurrentWeatherData();
+      
+      if (currentWeatherData && hasWeatherDataChanged(currentWeatherData)) {
+        console.log('🌦️ Weather data changed, updating crop animation...');
+        window.cropAnimator.updateFromWeatherData(currentWeatherData);
+        lastWeatherData = { ...currentWeatherData };
+      }
+    }
+  }, 2000); // Check every 2 seconds (faster)
+}
+
+// Stop weather monitoring
+function stopWeatherMonitoring() {
+  if (weatherMonitoringInterval) {
+    clearInterval(weatherMonitoringInterval);
+    weatherMonitoringInterval = null;
+  }
+}
+
+// Get current weather data from the dashboard
+function getCurrentWeatherData() {
+  try {
+    const tempElement = document.getElementById('temperature');
+    const humidityElement = document.getElementById('humidity');
+    const rainfallElement = document.getElementById('rainfall');
+    const windSpeedElement = document.getElementById('windSpeed');
+    const pressureElement = document.getElementById('pressureValue');
+    
+    if (!tempElement || !humidityElement) {
+      return null;
+    }
+    
+    const temperature = parseFloat(tempElement.textContent?.replace('°C', '')) || 25;
+    const humidity = parseFloat(humidityElement.textContent?.replace('%', '')) || 60;
+    const rainfall = parseFloat(rainfallElement?.textContent?.replace(' mm', '')) || 0;
+    const windSpeed = parseFloat(windSpeedElement?.textContent?.replace(' km/h', '')) || 5;
+    const pressure = parseFloat(pressureElement?.textContent) || 1013;
+    
+    return {
+      temperature,
+      humidity,
+      rainfall,
+      wind_speed: windSpeed,
+      pressure,
+      soil_moisture: calculateSoilMoisture(humidity, rainfall),
+      uv_index: calculateUVIndex(temperature)
+    };
+  } catch (error) {
+    console.error('Error getting current weather data:', error);
+    return null;
+  }
+}
+
+// Check if weather data has significantly changed
+function hasWeatherDataChanged(currentData) {
+  if (!lastWeatherData) {
+    return true;
+  }
+  
+  const thresholds = {
+    temperature: 0.5, // 0.5°C change
+    humidity: 2,      // 2% change
+    rainfall: 0.1,    // 0.1mm change
+    wind_speed: 1,    // 1 km/h change
+    pressure: 2       // 2 hPa change
+  };
+  
+  for (const [key, threshold] of Object.entries(thresholds)) {
+    if (Math.abs(currentData[key] - lastWeatherData[key]) >= threshold) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Helper function to calculate soil moisture from humidity and rainfall
+function calculateSoilMoisture(humidity, rainfall) {
+  let soilMoisture = 30; // Base soil moisture
+  
+  // Add humidity contribution (up to 40%)
+  soilMoisture += (humidity / 100) * 40;
+  
+  // Add rainfall contribution (each mm adds 5% up to 30%)
+  soilMoisture += Math.min(rainfall * 5, 30);
+  
+  return Math.min(Math.max(soilMoisture, 10), 95);
+}
+
+// Helper function to estimate UV index from temperature
+function calculateUVIndex(temperature) {
+  if (temperature < 15) return 2;
+  if (temperature < 25) return 4;
+  if (temperature < 30) return 6;
+  if (temperature < 35) return 8;
+  return 10;
+}
+
+// Enhanced crop animation integration with real-time updates
+function initializeCropAnimationIntegration() {
+  console.log('🌱 Initializing crop animation integration...');
+  
+  // Start weather monitoring
+  startWeatherMonitoring();
+  
+  // Listen for crop selection changes
+  const cropSelect = document.getElementById('cropSelect');
+  if (cropSelect) {
+    cropSelect.addEventListener('change', function() {
+      if (window.cropAnimator) {
+        console.log('🌾 Crop changed to:', this.value);
+        window.cropAnimator.changeCrop(this.value);
+        showNotification(`🌾 Crop changed to ${this.options[this.selectedIndex].text}`, 'info', 2000);
+      }
+    });
+  }
+  
+  // Listen for growth stage changes
+  const stageSelect = document.getElementById('stageSelect');
+  if (stageSelect) {
+    stageSelect.addEventListener('change', function() {
+      if (window.cropAnimator) {
+        console.log('🌱 Growth stage simulation for:', this.value);
+        // Simulate advancing to the selected stage
+        simulateGrowthStage(this.value);
+      }
+    });
+  }
+}
+
+// Simulate advancing crop to a specific growth stage
+function simulateGrowthStage(targetStage) {
+  if (!window.cropAnimator) return;
+  
+  const stages = ['seed', 'germination', 'seedling', 'vegetative', 'flowering', 'fruiting'];
+  const targetIndex = stages.indexOf(targetStage.toLowerCase());
+  
+  if (targetIndex >= 0) {
+    window.cropAnimator.currentStage = stages[targetIndex];
+    window.cropAnimator.stageProgress = 50; // Set to middle of stage
+    window.cropAnimator.animateStageTransition();
+    window.cropAnimator.updateStageLabels();
+    
+    showNotification(`🌱 Growth stage set to: ${targetStage}`, 'success', 2000);
+  }
+}
+
+// Initialize integration when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  // Wait a bit for other initializations to complete
+  setTimeout(() => {
+    initializeCropAnimationIntegration();
+  }, 2000);
+});
+
+// Cleanup when page unloads
+window.addEventListener('beforeunload', function() {
+  stopWeatherMonitoring();
+});
+
+// ===== END CROP ANIMATION INTEGRATION =====
+
 // Load weather data for global locations using coordinates
 async function loadGlobalLocationWeather(location) {
   try {
@@ -643,7 +819,7 @@ async function loadGlobalLocationWeather(location) {
     showLoading();
     
     // Fetch weather data using coordinates
-    const apiUrl = `http://localhost:4001/api/weather/coordinates/${location.latitude}/${location.longitude}`;
+    const apiUrl = `http://localhost:4002/api/weather/coordinates/${location.latitude}/${location.longitude}`;
     console.log('🌦️ [API CALL] Fetching from URL:', apiUrl);
     
     const response = await fetch(apiUrl);
@@ -1002,6 +1178,29 @@ function updateFarmingDashboardWithGlobalData(data, location) {
     // Use the main updateDashboard function which has comprehensive error handling
     console.log('=== CALLING MAIN UPDATE DASHBOARD ===');
     updateDashboard(data);
+    
+    // Update crop animation with new weather data if animation is active
+    if (window.cropAnimator && window.isAnimationActive) {
+      console.log('🌱 Updating crop animation with new weather data...');
+      const weatherData = {
+        temperature: data.weather.temperature,
+        humidity: data.weather.humidity,
+        rainfall: data.weather.rainfall,
+        wind_speed: data.weather.wind_speed,
+        pressure: data.weather.pressure,
+        soil_moisture: data.weather.soil_moisture || 50,
+        uv_index: data.weather.uv_index || 3
+      };
+      window.cropAnimator.updateFromWeatherData(weatherData);
+      
+      // Update crop type if it has changed
+      const selectedCrop = document.getElementById('cropSelect')?.value || 'rice';
+      if (window.cropAnimator.currentCrop !== selectedCrop) {
+        window.cropAnimator.changeCrop(selectedCrop);
+      }
+      
+      showNotification('🌱 Crop animation updated with live weather data!', 'success', 2000);
+    }
     
     // Additional global location specific updates to ensure AQI and humidity are updated
     console.log('=== FORCING AQI AND HUMIDITY UPDATES ===');
@@ -1435,7 +1634,7 @@ function setupEventListeners() {
 // Load available cities
 async function loadCities() {
   try {
-    const response = await fetch('http://localhost:4001/api/weather/cities?limit=15');
+    const response = await fetch('http://localhost:4002/api/weather/cities?limit=15');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
@@ -1451,7 +1650,7 @@ async function loadCities() {
 // Load crops data and populate dropdown
 async function loadCropsData() {
   try {
-    const response = await fetch('http://localhost:4001/api/farming/crops');
+    const response = await fetch('http://localhost:4002/api/farming/crops');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
@@ -1495,10 +1694,10 @@ async function loadFarmingDashboard() {
       controller.abort();
     }, 8000); // 8 second timeout
     
-    console.log('🌾 [DEBUG] Making API request to:', `http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+    console.log('🌾 [DEBUG] Making API request to:', `http://localhost:4002/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
     
     // Load dashboard data
-    const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`, {
+    const response = await fetch(`http://localhost:4002/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`, {
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -2250,7 +2449,7 @@ function closeModal(modalId) {
 // Load crop calendar
 async function loadCropCalendar() {
   try {
-    const response = await fetch('http://localhost:4001/api/farming/calendar');
+    const response = await fetch('http://localhost:4002/api/farming/calendar');
     const result = await response.json();
     
     if (result.success) {
@@ -3853,7 +4052,7 @@ async function loadExternalCropData(cropName, location = {}) {
     if (location.district) params.append('district', location.district);
     if (location.market) params.append('market', location.market);
     
-    const response = await fetch(`http://localhost:4001/api/farming/external-crop/${cropName}?${params}`);
+    const response = await fetch(`http://localhost:4002/api/farming/external-crop/${cropName}?${params}`);
     const data = await response.json();
     
     if (data.success) {
@@ -3871,7 +4070,7 @@ async function loadExternalCropData(cropName, location = {}) {
 // Load crop production statistics
 async function loadCropProductionStats(cropName, year = new Date().getFullYear()) {
   try {
-    const response = await fetch(`http://localhost:4001/api/farming/production/${cropName}?year=${year}`);
+    const response = await fetch(`http://localhost:4002/api/farming/production/${cropName}?year=${year}`);
     const data = await response.json();
     
     if (data.success) {
@@ -3890,7 +4089,7 @@ async function loadCropProductionStats(cropName, year = new Date().getFullYear()
 async function loadCropMarketPrices(cropName, market = '') {
   try {
     const params = market ? `?market=${encodeURIComponent(market)}` : '';
-    const response = await fetch(`http://localhost:4001/api/farming/prices/${cropName}${params}`);
+    const response = await fetch(`http://localhost:4002/api/farming/prices/${cropName}${params}`);
     const data = await response.json();
     
     if (data.success) {
@@ -3908,7 +4107,7 @@ async function loadCropMarketPrices(cropName, market = '') {
 // Search crops using external API
 async function searchExternalCrops(query, limit = 10) {
   try {
-    const response = await fetch(`http://localhost:4001/api/farming/search-crops?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const response = await fetch(`http://localhost:4002/api/farming/search-crops?q=${encodeURIComponent(query)}&limit=${limit}`);
     const data = await response.json();
     
     if (data.success) {
@@ -3948,7 +4147,7 @@ async function loadEnhancedCropRecommendations() {
       market: ''
     };
     
-    const response = await fetch(`http://localhost:4001/api/farming/enhanced-recommendations/${currentCity}?state=${location.state}&district=${location.district}`);
+    const response = await fetch(`http://localhost:4002/api/farming/enhanced-recommendations/${currentCity}?state=${location.state}&district=${location.district}`);
     const data = await response.json();
     
     if (data.success && data.data.crops) {
@@ -4334,7 +4533,7 @@ async function loadCropRecommendations() {
   generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
   
   try {
-    const response = await fetch(`http://localhost:4001/api/ml/crops/${currentCity}`);
+    const response = await fetch(`http://localhost:4002/api/ml/crops/${currentCity}`);
     const data = await response.json();
 
     if (data.success) {
@@ -4525,7 +4724,7 @@ async function manualTestDashboard() {
     
     // Test 2: Try loading real API data
     console.log('📝 [TEST] Loading real API data...');
-    const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+    const response = await fetch(`http://localhost:4002/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
     const data = await response.json();
     
     console.log('📝 [TEST] API Response:', data);

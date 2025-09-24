@@ -1,0 +1,550 @@
+/* Crop Growth Animation System */
+/* Advanced 2D weather-to-crop impact animations */
+
+.crop-growth-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  height: 500px;
+  margin: 20px auto;
+  background: linear-gradient(180deg, #87CEEB 0%, #90EE90 50%, #8B4513 100%);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+/* Weather Environment Layer */
+.weather-environment {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+/* Sun Animation */
+.sun {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, #FFD700 0%, #FFA500 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  animation: sunPulse 1.5s ease-in-out infinite;
+}
+
+.sun::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: sunGlow 1s ease-in-out infinite alternate;
+}
+
+/* Rain Animation */
+.rain-drops {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.rain-drops.active {
+  opacity: 1;
+}
+
+.rain-drop {
+  position: absolute;
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, transparent, #4A90E2);
+  border-radius: 0 0 50% 50%;
+  animation: rainFall 0.5s linear infinite;
+}
+
+.rain-drop:nth-child(odd) {
+  animation-delay: -0.25s;
+}
+
+.rain-drop:nth-child(1) { left: 10%; animation-duration: 0.4s; }
+.rain-drop:nth-child(2) { left: 20%; animation-duration: 0.6s; }
+.rain-drop:nth-child(3) { left: 30%; animation-duration: 0.45s; }
+.rain-drop:nth-child(4) { left: 40%; animation-duration: 0.55s; }
+.rain-drop:nth-child(5) { left: 50%; animation-duration: 0.5s; }
+.rain-drop:nth-child(6) { left: 60%; animation-duration: 0.35s; }
+.rain-drop:nth-child(7) { left: 70%; animation-duration: 0.65s; }
+.rain-drop:nth-child(8) { left: 80%; animation-duration: 0.45s; }
+.rain-drop:nth-child(9) { left: 90%; animation-duration: 0.55s; }
+
+/* Wind Animation */
+.wind-effects {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.wind-effects.active {
+  opacity: 1;
+}
+
+.wind-line {
+  position: absolute;
+  width: 30px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 1px;
+  animation: windMove 1s ease-in-out infinite;
+}
+
+.wind-line:nth-child(1) { top: 25%; animation-delay: 0s; }
+.wind-line:nth-child(2) { top: 35%; animation-delay: 0.15s; }
+.wind-line:nth-child(3) { top: 45%; animation-delay: 0.3s; }
+
+/* Crop Plant Base */
+.crop-plant {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.8s ease;
+}
+
+/* Growth Stages */
+.crop-plant.seed {
+  width: 10px;
+  height: 10px;
+  background: #8B4513;
+  border-radius: 50%;
+  bottom: 45px;
+}
+
+.crop-plant.germination {
+  width: 15px;
+  height: 20px;
+  background: linear-gradient(to top, #8B4513 50%, #90EE90 50%);
+  border-radius: 50% 50% 0 0;
+  bottom: 40px;
+}
+
+.crop-plant.seedling {
+  width: 30px;
+  height: 60px;
+  bottom: 20px;
+}
+
+.crop-plant.vegetative {
+  width: 60px;
+  height: 120px;
+  bottom: 10px;
+}
+
+.crop-plant.flowering {
+  width: 80px;
+  height: 150px;
+  bottom: 10px;
+}
+
+.crop-plant.fruiting {
+  width: 100px;
+  height: 180px;
+  bottom: 10px;
+}
+
+/* Plant SVG Styles */
+.plant-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Stem */
+.plant-stem {
+  fill: #228B22;
+  transition: all 0.3s ease;
+}
+
+/* Leaves */
+.plant-leaves {
+  fill: #32CD32;
+  transition: all 0.3s ease;
+  animation: leafSway 1.5s ease-in-out infinite;
+}
+
+/* Flowers */
+.plant-flowers {
+  fill: #FFB6C1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  animation: flowerBlossom 1s ease-in-out infinite;
+}
+
+.crop-plant.flowering .plant-flowers,
+.crop-plant.fruiting .plant-flowers {
+  opacity: 1;
+}
+
+/* Fruits */
+.plant-fruits {
+  fill: #FF6347;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  transform-origin: center;
+  animation: fruitGrow 1.5s ease-in-out infinite;
+}
+
+.crop-plant.fruiting .plant-fruits {
+  opacity: 1;
+}
+
+/* Roots (visible through soil cutaway) */
+.plant-roots {
+  fill: #8B4513;
+  opacity: 0.7;
+  animation: rootGrow 2s ease-in-out infinite;
+}
+
+/* Weather Stress Effects */
+.crop-plant.temperature-stress .plant-leaves {
+  fill: #FFD700; /* Yellowing from heat */
+  animation: stressWilting 1s ease-in-out infinite;
+}
+
+.crop-plant.drought-stress .plant-leaves {
+  fill: #B8860B; /* Browning from drought */
+  animation: droughtWilting 0.8s ease-in-out infinite;
+}
+
+.crop-plant.waterlogged .plant-leaves {
+  fill: #8FBC8F; /* Pale green from waterlogging */
+  animation: waterloggedSway 2s ease-in-out infinite;
+}
+
+.crop-plant.cold-stress .plant-leaves {
+  fill: #708090; /* Graying from cold */
+  animation: coldShiver 0.5s ease-in-out infinite;
+}
+
+.crop-plant.optimal-growth .plant-leaves {
+  fill: #00FF00; /* Vibrant green for optimal conditions */
+  animation: healthyGlow 1.5s ease-in-out infinite;
+}
+
+/* Soil and Root Zone */
+.soil-layer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(to bottom, #8B4513 0%, #654321 100%);
+}
+
+.soil-moisture-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(to bottom, rgba(70, 130, 180, 0.3) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.soil-moisture-indicator.wet {
+  opacity: 0.8;
+}
+
+.soil-moisture-indicator.optimal {
+  opacity: 0.4;
+}
+
+/* Growth Progress Bar */
+.growth-progress {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 200px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  overflow: visible;
+  cursor: pointer;
+  user-select: none;
+}
+
+.growth-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #90EE90 0%, #32CD32 100%);
+  width: 0%;
+  transition: width 0.3s ease;
+  border-radius: 10px;
+  position: relative;
+}
+
+.growth-progress-handle {
+  position: absolute;
+  right: -8px;
+  top: -4px;
+  width: 16px;
+  height: 28px;
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  border-radius: 8px;
+  cursor: grab;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 2px solid white;
+  transition: all 0.2s ease;
+}
+
+.growth-progress-handle:hover {
+  background: linear-gradient(45deg, #45a049, #4CAF50);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.growth-progress-handle:active,
+.growth-progress-handle.dragging {
+  cursor: grabbing;
+  transform: scale(1.2);
+  background: linear-gradient(45deg, #2E7D32, #388E3C);
+}
+
+.growth-progress-labels {
+  position: absolute;
+  top: 25px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+
+.growth-progress-label {
+  text-align: center;
+  font-weight: 500;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Weather Parameter Indicators */
+.weather-indicators {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.weather-indicator {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  min-width: 100px;
+}
+
+.weather-indicator .icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.weather-indicator.temperature {
+  background: linear-gradient(90deg, #FFE4B5, #FFA500);
+}
+
+.weather-indicator.humidity {
+  background: linear-gradient(90deg, #E0F6FF, #87CEEB);
+}
+
+.weather-indicator.rainfall {
+  background: linear-gradient(90deg, #F0F8FF, #4682B4);
+}
+
+/* Animation Keyframes */
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes sunGlow {
+  0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+  100% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+}
+
+@keyframes rainFall {
+  0% { top: -20px; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes windMove {
+  0% { left: -30px; opacity: 0; }
+  50% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+@keyframes leafSway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(2deg); }
+  75% { transform: rotate(-2deg); }
+}
+
+@keyframes flowerBlossom {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes fruitGrow {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes rootGrow {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.05); }
+}
+
+@keyframes stressWilting {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(-5deg) scale(0.95); }
+}
+
+@keyframes droughtWilting {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-3deg) scale(0.9); }
+  75% { transform: rotate(3deg) scale(0.9); }
+}
+
+@keyframes waterloggedSway {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes coldShiver {
+  0%, 100% { transform: translateX(0px); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes healthyGlow {
+  0%, 100% { filter: drop-shadow(0 0 5px #00FF00); }
+  50% { filter: drop-shadow(0 0 15px #32CD32); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .crop-growth-container {
+    height: 350px;
+    margin: 10px;
+  }
+  
+  .weather-indicators {
+    flex-direction: row;
+    flex-wrap: wrap;
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .weather-indicator {
+    font-size: 10px;
+    padding: 3px 6px;
+    min-width: 80px;
+  }
+  
+  .growth-progress {
+    width: 150px;
+    height: 15px;
+    top: 10px;
+    left: 10px;
+  }
+}
+
+/* Interactive Controls */
+.animation-controls {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.control-button {
+  background: linear-gradient(45deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.control-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.control-button:active {
+  transform: translateY(0);
+}
+
+.control-button.weather-rain {
+  background: linear-gradient(45deg, #2196F3, #1976D2);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+.control-button.weather-sun {
+  background: linear-gradient(45deg, #FF9800, #F57C00);
+  box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+}
+
+.control-button.weather-wind {
+  background: linear-gradient(45deg, #607D8B, #455A64);
+  box-shadow: 0 4px 15px rgba(96, 125, 139, 0.3);
+}
+
+/* Growth Stage Labels */
+.stage-labels {
+  position: absolute;
+  bottom: -30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stage-label {
+  text-align: center;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.stage-label.active {
+  opacity: 1;
+  color: #2E7D32;
+  font-weight: 700;
+}

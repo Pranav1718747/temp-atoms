@@ -9,7 +9,7 @@ console.log('overallCondition exists:', !!document.getElementById('overallCondit
 async function testAPIEndpoint() {
   try {
     console.log('Testing API endpoint...');
-    const response = await fetch('http://localhost:4001/api/farming/dashboard/Delhi?crop=rice&stage=vegetative');
+    const response = await fetch('http://localhost:4002/api/farming/dashboard/Delhi?crop=rice&stage=vegetative');
     const data = await response.json();
     console.log('API Response:', data);
     

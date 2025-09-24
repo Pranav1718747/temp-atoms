@@ -378,9 +378,14 @@
     <section class="suitable-crops-section">
       <div class="ml-header">
         <h2>🌾 AI Crop Recommendations</h2>
-        <button id="generateCropRecommendations" class="predict-btn" onclick="loadCropRecommendations()">
-          <i class="fas fa-brain"></i> Get AI Recommendations
-        </button>
+        <div class="recommendation-buttons">
+          <button id="generateCropRecommendations" class="predict-btn" onclick="loadCropRecommendations()">
+            <i class="fas fa-brain"></i> Get AI Recommendations
+          </button>
+          <button id="generateEnhancedRecommendations" class="predict-btn enhanced-btn" onclick="loadEnhancedCropRecommendations()">
+            <i class="fas fa-chart-line"></i> Enhanced with Real Data
+          </button>
+        </div>
       </div>
       <div class="crops-grid" id="cropsGrid">
         <!-- Dynamic content will be inserted here -->
@@ -418,6 +423,14 @@
         <button class="action-btn" onclick="testComprehensiveWeatherManual()" style="background: #ff4444; color: white;">
           <i class="fas fa-bug"></i>
           <span>TEST Weather</span>
+        </button>
+        <button class="action-btn" onclick="manualTestDashboard()" style="background: #4444ff; color: white;">
+          <i class="fas fa-cog"></i>
+          <span>TEST Dashboard</span>
+        </button>
+        <button class="action-btn" onclick="forceUpdateDashboard()" style="background: #9c27b0; color: white;">
+          <i class="fas fa-bolt"></i>
+          <span>FORCE Update</span>
         </button>
       </div>
     </section>

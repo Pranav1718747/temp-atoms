@@ -51,7 +51,7 @@ const mlService = new MLService(climateDB, climateAPI);
 // Initialize route handlers with shared instances
 initializeRouter(climateAPI, climateDB);
 initializeAlertRouter(alertService);
-initializeFarmingRouter(farmingService, climateDB);
+initializeFarmingRouter(farmingService, climateDB, climateAPI);
 initializeMLRouter(mlService);
 
 // Get active cities from database

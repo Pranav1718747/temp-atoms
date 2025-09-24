@@ -3,10 +3,12 @@ const router = express.Router();
 
 let farmingService;
 let climateDB;
+let climateAPI;
 
-function initializeFarmingRouter(farmingServiceInstance, climateDBInstance) {
+function initializeFarmingRouter(farmingServiceInstance, climateDBInstance, climateAPIInstance) {
   farmingService = farmingServiceInstance;
   climateDB = climateDBInstance;
+  climateAPI = climateAPIInstance;
 }
 
 // Get farming recommendations for a specific city and crop
@@ -126,13 +128,89 @@ router.get('/dashboard/:cityName', async (req, res) => {
     const defaultCrop = req.query.crop || 'rice';
     const defaultStage = req.query.stage || 'vegetative';
     
-    // Get weather data
-    const weatherData = climateDB.getLatestWeather(cityName);
+    // First try to get weather data from local database
+    let weatherData = climateDB.getLatestWeather(cityName);
+    let cityInfo = climateDB.getCityByName(cityName);
+    let isGlobalLocation = false;
     
+    // If not found in local database, try to get from global weather API
+    if (!weatherData && climateAPI) {
+      console.log(`City '${cityName}' not found in local database, attempting global weather lookup...`);
+      
+      try {
+        // Use the global weather API to get data for any location
+        const globalWeatherResponse = await climateAPI.getWeatherForAnyLocation(cityName);
+        
+        if (globalWeatherResponse.success && globalWeatherResponse.weather) {
+          console.log(`Successfully found global weather data for ${cityName}`);
+          
+          // Transform global weather data to local format
+          const globalWeather = globalWeatherResponse.weather.current;
+          weatherData = {
+            id: Date.now(), // Temporary ID
+            city_id: 0, // Global location
+            city_name: cityName,
+            temperature: globalWeather.temperature,
+            feels_like: globalWeather.feels_like || globalWeather.temperature,
+            temp_min: globalWeather.temperature - 2, // Approximate
+            temp_max: globalWeather.temperature + 2, // Approximate
+            humidity: globalWeather.humidity,
+            pressure: globalWeather.pressure,
+            rainfall: globalWeather.precipitation || 0,
+            rainfall_24h: globalWeather.precipitation || 0,
+            wind_speed: globalWeather.wind_speed,
+            wind_direction: globalWeather.wind_direction,
+            wind_gust: globalWeather.wind_gust,
+            visibility: globalWeather.visibility,
+            uv_index: globalWeather.uv_index,
+            cloud_cover: globalWeather.cloud_cover,
+            dew_point: globalWeather.dew_point,
+            heat_index: globalWeather.heat_index,
+            wind_chill: globalWeather.wind_chill,
+            soil_temperature: globalWeather.soil_temperature,
+            soil_moisture: globalWeather.soil_moisture,
+            evapotranspiration: globalWeather.evapotranspiration,
+            growing_degree_days: globalWeather.growing_degree_days,
+            air_quality_pm25: globalWeather.air_quality_pm25,
+            air_quality_pm10: globalWeather.air_quality_pm10,
+            air_quality_index: globalWeather.air_quality_index,
+            pressure_trend: globalWeather.pressure_trend,
+            moon_phase: globalWeather.moon_phase,
+            moon_illumination: globalWeather.moon_illumination,
+            weather_description: globalWeather.weather_description || 'Current conditions',
+            weather_condition: globalWeather.weather_condition || 'Clear',
+            data_source: 'Global Weather API',
+            sunrise: globalWeather.sunrise,
+            sunset: globalWeather.sunset,
+            recorded_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+            latitude: globalWeatherResponse.location?.latitude,
+            longitude: globalWeatherResponse.location?.longitude
+          };
+          
+          // Create temporary city info for global location
+          cityInfo = {
+            id: 0,
+            name: cityName,
+            latitude: globalWeatherResponse.location?.latitude,
+            longitude: globalWeatherResponse.location?.longitude,
+            country: globalWeatherResponse.location?.country || 'Global',
+            state: globalWeatherResponse.location?.admin1 || 'Unknown',
+            region: globalWeatherResponse.location?.admin2 || 'Unknown'
+          };
+          
+          isGlobalLocation = true;
+          console.log(`Transformed global weather data for ${cityName}:`, weatherData);
+        }
+      } catch (globalError) {
+        console.error(`Error fetching global weather for ${cityName}:`, globalError.message);
+      }
+    }
+    
+    // If still no weather data found, return error
     if (!weatherData) {
       return res.status(404).json({
         success: false,
-        error: `No weather data found for ${cityName}`
+        error: `No weather data found for ${cityName}. Please try a different location or check spelling.`
       });
     }
     
@@ -146,8 +224,12 @@ router.get('/dashboard/:cityName', async (req, res) => {
     const suitableCrops = farmingService.getSuitableCrops(weatherData);
     const currentSeason = farmingService.getCurrentSeason();
     
-    // Get city information
-    const cityInfo = climateDB.getCityByName(cityName);
+    // Set cache-busting headers to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     
     res.json({
       success: true,
@@ -163,7 +245,8 @@ router.get('/dashboard/:cityName', async (req, res) => {
         suitable_crops: suitableCrops.slice(0, 6), // Top 6 suitable crops
         farming_alerts: recommendations.alerts || [],
         last_updated: weatherData.recorded_at,
-        generated_at: new Date().toISOString()
+        generated_at: new Date().toISOString(),
+        is_global_location: isGlobalLocation
       }
     });
     
@@ -215,6 +298,181 @@ router.get('/calendar', (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to generate farming calendar'
+    });
+  }
+});
+
+// ===== NEW EXTERNAL CROP API ROUTES =====
+
+// Get external crop data
+router.get('/external-crop/:cropName', async (req, res) => {
+  try {
+    const { cropName } = req.params;
+    const location = {
+      state: req.query.state || '',
+      district: req.query.district || '',
+      market: req.query.market || ''
+    };
+    
+    const cropData = await farmingService.getExternalCropData(cropName, location);
+    
+    res.json({
+      success: true,
+      data: cropData
+    });
+    
+  } catch (error) {
+    console.error('Error fetching external crop data:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch external crop data'
+    });
+  }
+});
+
+// Get crop production statistics
+router.get('/production/:cropName', async (req, res) => {
+  try {
+    const { cropName } = req.params;
+    const year = req.query.year || new Date().getFullYear();
+    
+    const productionStats = await farmingService.getCropProductionStats(cropName, year);
+    
+    res.json({
+      success: true,
+      data: productionStats
+    });
+    
+  } catch (error) {
+    console.error('Error fetching crop production stats:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch crop production statistics'
+    });
+  }
+});
+
+// Get crop market prices
+router.get('/prices/:cropName', async (req, res) => {
+  try {
+    const { cropName } = req.params;
+    const marketName = req.query.market || '';
+    
+    const priceData = await farmingService.getCropMarketPrices(cropName, marketName);
+    
+    res.json({
+      success: true,
+      data: priceData
+    });
+    
+  } catch (error) {
+    console.error('Error fetching crop prices:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch crop market prices'
+    });
+  }
+});
+
+// Get enhanced crop recommendations with external data
+router.get('/enhanced-recommendations/:cityName', async (req, res) => {
+  try {
+    const { cityName } = req.params;
+    const location = {
+      state: req.query.state || '',
+      district: req.query.district || '',
+      market: req.query.market || ''
+    };
+    
+    // First try to get weather data from local database
+    let weatherData = climateDB.getLatestWeather(cityName);
+    
+    // If not found in local database, try to get from global weather API
+    if (!weatherData && climateAPI) {
+      console.log(`City '${cityName}' not found in local database for enhanced recommendations, attempting global weather lookup...`);
+      
+      try {
+        // Use the global weather API to get data for any location
+        const globalWeatherResponse = await climateAPI.getWeatherForAnyLocation(cityName);
+        
+        if (globalWeatherResponse.success && globalWeatherResponse.weather) {
+          console.log(`Successfully found global weather data for enhanced recommendations: ${cityName}`);
+          
+          // Transform global weather data to local format
+          const globalWeather = globalWeatherResponse.weather.current;
+          weatherData = {
+            temperature: globalWeather.temperature,
+            humidity: globalWeather.humidity,
+            pressure: globalWeather.pressure,
+            rainfall: globalWeather.precipitation || 0,
+            wind_speed: globalWeather.wind_speed,
+            wind_direction: globalWeather.wind_direction,
+            weather_description: globalWeather.weather_description || 'Current conditions',
+            data_source: 'Global Weather API',
+            recorded_at: new Date().toISOString().slice(0, 19).replace('T', ' ')
+          };
+        }
+      } catch (globalError) {
+        console.error(`Error fetching global weather for enhanced recommendations ${cityName}:`, globalError.message);
+      }
+    }
+    
+    if (!weatherData) {
+      return res.status(404).json({
+        success: false,
+        error: `No weather data found for ${cityName}. Please try a different location.`
+      });
+    }
+    
+    const enhancedRecommendations = await farmingService.getEnhancedCropRecommendations(weatherData, location);
+    
+    // Set cache-busting headers to ensure fresh data
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    res.json({
+      success: true,
+      city: cityName,
+      data: enhancedRecommendations
+    });
+    
+  } catch (error) {
+    console.error('Error getting enhanced recommendations:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get enhanced crop recommendations'
+    });
+  }
+});
+
+// Search crops using external API
+router.get('/search-crops', async (req, res) => {
+  try {
+    const query = req.query.q || '';
+    const limit = parseInt(req.query.limit) || 10;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+    
+    const searchResults = await farmingService.searchCrops(query, limit);
+    
+    res.json({
+      success: true,
+      data: searchResults
+    });
+    
+  } catch (error) {
+    console.error('Error searching crops:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search crops'
     });
   }
 });

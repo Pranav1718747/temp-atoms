@@ -2,6 +2,10 @@ class FarmingService {
   constructor(climateDB) {
     this.db = climateDB;
     
+    // Initialize Crop API Service
+    const CropAPIService = require('../utils/cropAPIs');
+    this.cropAPI = new CropAPIService();
+    
     // Crop-specific thresholds and recommendations
     this.cropData = {
       rice: {
@@ -435,6 +439,281 @@ class FarmingService {
     if (score >= 60) return 'Good';
     if (score >= 40) return 'Fair';
     return 'Poor';
+  }
+
+  // ===== NEW EXTERNAL CROP API INTEGRATION =====
+
+  /**
+   * Get comprehensive crop data from external APIs
+   */
+  async getExternalCropData(cropName, location = {}) {
+    try {
+      console.log(`Fetching external crop data for ${cropName}`);
+      
+      const cropData = await this.cropAPI.getComprehensiveCropData(cropName, location);
+      
+      // Merge with local crop data
+      const localCrop = this.cropData[cropName.toLowerCase()];
+      
+      return {
+        ...cropData,
+        localRecommendations: localCrop,
+        enhanced: true,
+        fetchedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error fetching external crop data:', error.message);
+      
+      // Return local data as fallback
+      return {
+        crop: cropName,
+        localRecommendations: this.cropData[cropName.toLowerCase()],
+        enhanced: false,
+        error: error.message,
+        fallback: true
+      };
+    }
+  }
+
+  /**
+   * Get crop production statistics
+   */
+  async getCropProductionStats(cropName, year = new Date().getFullYear()) {
+    try {
+      const productionData = await this.cropAPI.getCropProduction(cropName, year);
+      
+      if (productionData) {
+        return {
+          success: true,
+          crop: cropName,
+          year: year,
+          data: productionData,
+          summary: this.calculateProductionSummary(productionData)
+        };
+      }
+      
+      return {
+        success: false,
+        crop: cropName,
+        error: 'No production data available',
+        fallback: this.getFallbackProductionData(cropName)
+      };
+    } catch (error) {
+      console.error('Error fetching crop production stats:', error.message);
+      return {
+        success: false,
+        crop: cropName,
+        error: error.message,
+        fallback: this.getFallbackProductionData(cropName)
+      };
+    }
+  }
+
+  /**
+   * Get current crop market prices
+   */
+  async getCropMarketPrices(cropName, marketName = '') {
+    try {
+      const priceData = await this.cropAPI.getCropPrices(cropName, marketName);
+      
+      if (priceData && priceData.length > 0) {
+        return {
+          success: true,
+          crop: cropName,
+          market: marketName,
+          prices: priceData,
+          trends: this.analyzePriceTrends(priceData),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      
+      return {
+        success: false,
+        crop: cropName,
+        error: 'No price data available',
+        fallback: this.getFallbackPriceData(cropName)
+      };
+    } catch (error) {
+      console.error('Error fetching crop market prices:', error.message);
+      return {
+        success: false,
+        crop: cropName,
+        error: error.message,
+        fallback: this.getFallbackPriceData(cropName)
+      };
+    }
+  }
+
+  /**
+   * Enhanced crop recommendations with external data
+   */
+  async getEnhancedCropRecommendations(weatherData, location = {}) {
+    try {
+      const localSuitableCrops = this.getSuitableCrops(weatherData);
+      
+      // Enhance each crop with external data
+      const enhancedCrops = await Promise.allSettled(
+        localSuitableCrops.slice(0, 5).map(async (crop) => {
+          const externalData = await this.getExternalCropData(crop.key, location);
+          const priceData = await this.getCropMarketPrices(crop.key);
+          
+          return {
+            ...crop,
+            externalData: externalData,
+            marketInfo: priceData,
+            enhanced: true
+          };
+        })
+      );
+      
+      const processedCrops = enhancedCrops
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+      
+      return {
+        success: true,
+        crops: processedCrops,
+        location: location,
+        weather: weatherData,
+        enhancedWithExternalData: true,
+        generatedAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error getting enhanced crop recommendations:', error.message);
+      
+      // Fallback to local recommendations
+      return {
+        success: false,
+        crops: this.getSuitableCrops(weatherData),
+        location: location,
+        weather: weatherData,
+        enhancedWithExternalData: false,
+        error: error.message,
+        fallback: true
+      };
+    }
+  }
+
+  /**
+   * Search crops using external API
+   */
+  async searchCrops(query, limit = 10) {
+    try {
+      const searchResults = await this.cropAPI.searchCrops(query, limit);
+      
+      // Enhance search results with local recommendations
+      const enhancedResults = searchResults.map(crop => {
+        const localCrop = this.cropData[crop.name.toLowerCase()];
+        return {
+          ...crop,
+          localData: localCrop,
+          hasLocalRecommendations: !!localCrop
+        };
+      });
+      
+      return {
+        success: true,
+        query: query,
+        results: enhancedResults,
+        count: enhancedResults.length
+      };
+    } catch (error) {
+      console.error('Error searching crops:', error.message);
+      
+      // Fallback to local search
+      const localResults = Object.entries(this.cropData)
+        .filter(([key, crop]) => 
+          crop.name.toLowerCase().includes(query.toLowerCase()) ||
+          key.includes(query.toLowerCase())
+        )
+        .slice(0, limit)
+        .map(([key, crop]) => ({
+          name: crop.name,
+          key: key,
+          localData: crop,
+          hasLocalRecommendations: true,
+          fallback: true
+        }));
+      
+      return {
+        success: false,
+        query: query,
+        results: localResults,
+        count: localResults.length,
+        error: error.message,
+        fallback: true
+      };
+    }
+  }
+
+  // ===== HELPER METHODS FOR EXTERNAL DATA =====
+
+  calculateProductionSummary(productionData) {
+    if (!productionData || productionData.length === 0) return null;
+    
+    const totalProduction = productionData.reduce((sum, item) => sum + (item.production || 0), 0);
+    const totalArea = productionData.reduce((sum, item) => sum + (item.area || 0), 0);
+    const avgProductivity = totalArea > 0 ? totalProduction / totalArea : 0;
+    
+    return {
+      totalProduction: totalProduction,
+      totalArea: totalArea,
+      averageProductivity: avgProductivity,
+      topStates: productionData
+        .sort((a, b) => (b.production || 0) - (a.production || 0))
+        .slice(0, 5)
+        .map(item => ({ state: item.state, production: item.production }))
+    };
+  }
+
+  analyzePriceTrends(priceData) {
+    if (!priceData || priceData.length === 0) return null;
+    
+    const avgMinPrice = priceData.reduce((sum, item) => sum + (item.minPrice || 0), 0) / priceData.length;
+    const avgMaxPrice = priceData.reduce((sum, item) => sum + (item.maxPrice || 0), 0) / priceData.length;
+    const avgModalPrice = priceData.reduce((sum, item) => sum + (item.modalPrice || 0), 0) / priceData.length;
+    
+    return {
+      averageMinPrice: Math.round(avgMinPrice),
+      averageMaxPrice: Math.round(avgMaxPrice),
+      averageModalPrice: Math.round(avgModalPrice),
+      priceRange: Math.round(avgMaxPrice - avgMinPrice),
+      marketCount: priceData.length,
+      lastUpdated: priceData[0]?.date || new Date().toISOString()
+    };
+  }
+
+  getFallbackProductionData(cropName) {
+    const fallbackData = {
+      rice: { production: '120 million tonnes', area: '43 million hectares', productivity: '2.8 tonnes/hectare' },
+      wheat: { production: '110 million tonnes', area: '30 million hectares', productivity: '3.7 tonnes/hectare' },
+      cotton: { production: '6 million bales', area: '13 million hectares', productivity: '500 kg/hectare' },
+      sugarcane: { production: '400 million tonnes', area: '5 million hectares', productivity: '80 tonnes/hectare' }
+    };
+    
+    return fallbackData[cropName.toLowerCase()] || {
+      production: 'Data not available',
+      area: 'Data not available',
+      productivity: 'Data not available'
+    };
+  }
+
+  getFallbackPriceData(cropName) {
+    const fallbackPrices = {
+      rice: { minPrice: 1800, maxPrice: 2500, modalPrice: 2100, unit: 'per quintal' },
+      wheat: { minPrice: 2000, maxPrice: 2400, modalPrice: 2200, unit: 'per quintal' },
+      cotton: { minPrice: 5500, maxPrice: 7000, modalPrice: 6200, unit: 'per quintal' },
+      sugarcane: { minPrice: 320, maxPrice: 400, modalPrice: 360, unit: 'per quintal' },
+      tomato: { minPrice: 1000, maxPrice: 3000, modalPrice: 2000, unit: 'per quintal' },
+      onion: { minPrice: 800, maxPrice: 2500, modalPrice: 1500, unit: 'per quintal' }
+    };
+    
+    return fallbackPrices[cropName.toLowerCase()] || {
+      minPrice: 1000,
+      maxPrice: 2000,
+      modalPrice: 1500,
+      unit: 'per quintal'
+    };
   }
 }
 

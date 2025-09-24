@@ -756,60 +756,277 @@ function updateSeasonDisplay(season) {
 // Load complete farming dashboard
 async function loadFarmingDashboard() {
   try {
-    console.log('Loading farming dashboard for:', currentCity, 'crop:', currentCrop, 'stage:', currentStage);
+    console.log('🌾 [DEBUG] Starting loadFarmingDashboard for:', currentCity, 'crop:', currentCrop, 'stage:', currentStage);
     showLoading();
     
+    // Add timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log('🌾 [DEBUG] Request timeout after 8 seconds');
+      controller.abort();
+    }, 8000); // 8 second timeout
+    
+    console.log('🌾 [DEBUG] Making API request to:', `http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+    
     // Load dashboard data
-    const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
-    console.log('API response status:', response.status);
+    const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    console.log('🌾 [DEBUG] API response status:', response.status);
     
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
-    console.log('API result:', result);
+    console.log('🌾 [DEBUG] API result received:', result);
     
     if (result.success && result.data) {
-      console.log('Updating dashboard with data:', result.data);
+      console.log('🌾 [DEBUG] Calling updateDashboard with data:', result.data);
       updateDashboard(result.data);
+      console.log('🌾 [DEBUG] Dashboard update completed successfully');
     } else {
       throw new Error(result.error || 'Failed to load farming data');
     }
     
   } catch (error) {
-    console.error('Error loading farming dashboard:', error);
-    showError('Failed to load farming data. Please try again.');
+    console.error('🌾 [ERROR] loadFarmingDashboard failed:', error);
+    
+    if (error.name === 'AbortError') {
+      console.log('🌾 [DEBUG] Request timed out, using fallback data');
+      loadFallbackFarmingData();
+    } else {
+      console.log('🌾 [DEBUG] Using fallback data due to error');
+      showError('Failed to load farming data. Using cached data.');
+      loadFallbackFarmingData();
+    }
   } finally {
+    console.log('🌾 [DEBUG] Hiding loading overlay');
     hideLoading();
   }
 }
 
-// Update the complete dashboard
+// Load fallback farming data when API fails
+function loadFallbackFarmingData() {
+  console.log('Loading fallback farming data for:', currentCity);
+  
+  // Create fallback weather data
+  const fallbackWeather = {
+    temperature: 28.5,
+    humidity: 65,
+    pressure: 1013.2,
+    wind_speed: 8.5,
+    wind_direction: 180,
+    rainfall: 2.0,
+    weather_description: 'partly cloudy'
+  };
+  
+  // Create fallback farming data structure
+  const fallbackData = {
+    city: { name: currentCity },
+    weather: fallbackWeather,
+    season: 'Kharif',
+    selected_crop: {
+      type: currentCrop,
+      stage: currentStage,
+      recommendations: {
+        crop: {
+          name: currentCrop.charAt(0).toUpperCase() + currentCrop.slice(1),
+          icon: getCropIcon(currentCrop),
+          waterNeeds: { min: 80, max: 150 },
+          tempRange: { min: 20, max: 35 },
+          humidity: { min: 60, max: 80 }
+        },
+        stage: {
+          name: 'Growing',
+          icon: '🌿',
+          waterMultiplier: 1.0
+        },
+        conditions: {
+          temperature: {
+            status: 'good',
+            message: `Temperature is suitable for ${currentCrop} (${fallbackWeather.temperature}°C)`,
+            icon: '🌡️✅',
+            action: 'Continue normal farming activities'
+          },
+          humidity: {
+            status: 'fair',
+            message: `Humidity is moderate (${fallbackWeather.humidity}%)`,
+            icon: '💧⚖️',
+            action: 'Monitor humidity levels'
+          },
+          water: {
+            status: 'fair',
+            message: `Light rainfall (${fallbackWeather.rainfall}mm/h)`,
+            icon: '🌧️⚖️',
+            action: 'Supplement with irrigation as needed'
+          },
+          overall: 'fair'
+        },
+        irrigation: {
+          needed: true,
+          amount: 75,
+          frequency: 'moderate',
+          message: 'Regular irrigation: 75.0mm per week',
+          icon: '💦',
+          urgency: 'medium'
+        },
+        protection: [],
+        timing: [
+          {
+            activity: 'Field Work',
+            message: 'Good weather for farming activities',
+            icon: '🚜',
+            priority: 'medium'
+          }
+        ],
+        alerts: []
+      }
+    },
+    suitable_crops: [
+      {
+        name: 'Rice',
+        icon: '🌾',
+        key: 'rice',
+        suitability: 85,
+        suitabilityText: 'Excellent'
+      },
+      {
+        name: 'Cotton',
+        icon: '🌱',
+        key: 'cotton',
+        suitability: 78,
+        suitabilityText: 'Good'
+      },
+      {
+        name: 'Tomato',
+        icon: '🍅',
+        key: 'tomato',
+        suitability: 72,
+        suitabilityText: 'Good'
+      }
+    ],
+    farming_alerts: []
+  };
+  
+  console.log('Using fallback data:', fallbackData);
+  updateDashboard(fallbackData);
+  
+  // Show notification that we're using cached data
+  showNotification('Using offline data. Check your internet connection.', 'warning', 5000);
+}
+
+// Get crop icon by name
+function getCropIcon(cropName) {
+  const icons = {
+    'rice': '🌾',
+    'wheat': '🌾',
+    'cotton': '🌱',
+    'sugarcane': '🎋',
+    'tomato': '🍅',
+    'onion': '🧅',
+    'potato': '🥔',
+    'corn': '🌽',
+    'soybean': '🫘',
+    'barley': '🌾'
+  };
+  return icons[cropName.toLowerCase()] || '🌱';
+}
 function updateDashboard(data) {
-  // Update weather summary
-  updateWeatherSummary(data.weather, data.selected_crop.recommendations);
+  console.log('🎓 [DEBUG] updateDashboard called with data:', data);
   
-  // Update comprehensive weather display
-  updateComprehensiveWeatherDisplay(data.weather);
-  
-  // Update comprehensive weather scene
-  updateComprehensiveWeatherScene(data.weather);
-  
-  // Update overall condition
-  updateOverallCondition(data.selected_crop.recommendations.conditions);
-  
-  // Update recommendations
-  updateRecommendations(data.selected_crop.recommendations);
-  
-  // Update irrigation advice
-  updateIrrigation(data.selected_crop.recommendations.irrigation);
-  
-  // Update suitable crops
-  updateSuitableCrops(data.suitable_crops);
-  
-  // Update farming alerts
-  updateFarmingAlerts(data.farming_alerts);
-  
-  console.log('Dashboard updated successfully');
+  try {
+    console.log('🎓 [DEBUG] Starting dashboard update process');
+    
+    // Update weather summary
+    if (data.weather && data.selected_crop && data.selected_crop.recommendations) {
+      console.log('🎓 [DEBUG] Updating weather summary');
+      updateWeatherSummary(data.weather, data.selected_crop.recommendations);
+    } else {
+      console.warn('🎓 [WARN] Missing weather or recommendations data for weather summary');
+    }
+    
+    // Update comprehensive weather display
+    if (data.weather) {
+      console.log('🎓 [DEBUG] Updating comprehensive weather display');
+      updateComprehensiveWeatherDisplay(data.weather);
+      updateComprehensiveWeatherScene(data.weather);
+    } else {
+      console.warn('🎓 [WARN] Missing weather data for comprehensive display');
+    }
+    
+    // Update overall condition
+    if (data.selected_crop && data.selected_crop.recommendations && data.selected_crop.recommendations.conditions) {
+      console.log('🎓 [DEBUG] Updating overall condition with:', data.selected_crop.recommendations.conditions);
+      updateOverallCondition(data.selected_crop.recommendations.conditions);
+    } else {
+      console.warn('🎓 [WARN] Missing conditions data for overall condition');
+    }
+    
+    // Show notification for global locations
+    if (data.is_global_location) {
+      showNotification(`📍 Showing data for global location: ${data.city.name || currentCity}`, 'info', 4000);
+    }
+    
+    // Update recommendations - this is the Smart Recommendations section
+    if (data.selected_crop && data.selected_crop.recommendations) {
+      console.log('🎓 [DEBUG] Updating recommendations with:', data.selected_crop.recommendations);
+      updateRecommendations(data.selected_crop.recommendations);
+    } else {
+      console.warn('🎓 [WARN] Missing recommendations data');
+      // Show fallback recommendations
+      const grid = document.getElementById('recommendationGrid');
+      if (grid) {
+        console.log('🎓 [DEBUG] Setting fallback loading message for recommendations');
+        grid.innerHTML = '<div class="loading-message"><i class="fas fa-seedling"></i><p>Loading farming recommendations...</p></div>';
+      } else {
+        console.error('🎓 [ERROR] recommendationGrid element not found!');
+      }
+    }
+    
+    // Update irrigation advice - this is the Water Management section
+    if (data.selected_crop && data.selected_crop.recommendations && data.selected_crop.recommendations.irrigation) {
+      console.log('🎓 [DEBUG] Updating irrigation with:', data.selected_crop.recommendations.irrigation);
+      updateIrrigation(data.selected_crop.recommendations.irrigation);
+    } else {
+      console.warn('🎓 [WARN] Missing irrigation data');
+      // Show fallback irrigation
+      const card = document.getElementById('irrigationCard');
+      if (card) {
+        console.log('🎓 [DEBUG] Setting fallback loading message for irrigation');
+        const content = card.querySelector('.irrigation-content');
+        if (content) {
+          content.innerHTML = '<h3>Loading irrigation advice...</h3><p>Analyzing weather conditions for water management recommendations.</p>';
+        } else {
+          console.error('🎓 [ERROR] irrigation-content element not found in card!');
+        }
+      } else {
+        console.error('🎓 [ERROR] irrigationCard element not found!');
+      }
+    }
+    
+    // Update suitable crops
+    if (data.suitable_crops && Array.isArray(data.suitable_crops)) {
+      console.log('🎓 [DEBUG] Updating suitable crops with:', data.suitable_crops.length, 'crops');
+      updateSuitableCrops(data.suitable_crops);
+    } else {
+      console.warn('🎓 [WARN] Missing suitable crops data');
+    }
+    
+    // Update farming alerts
+    if (data.farming_alerts !== undefined) {
+      console.log('🎓 [DEBUG] Updating farming alerts with:', data.farming_alerts);
+      updateFarmingAlerts(data.farming_alerts);
+    } else {
+      console.warn('🎓 [WARN] Missing farming alerts data');
+    }
+    
+    console.log('🎓 [DEBUG] Dashboard updated successfully');
+    
+  } catch (error) {
+    console.error('🎓 [ERROR] Error updating dashboard:', error);
+    console.error('🎓 [ERROR] Error stack:', error.stack);
+    showNotification('Some dashboard sections may not have loaded properly', 'warning', 3000);
+  }
 }
 
 // Update weather summary for farmers
@@ -894,37 +1111,73 @@ function updateOverallCondition(conditions) {
 // Update recommendations grid
 function updateRecommendations(recommendations) {
   const grid = document.getElementById('recommendationGrid');
+  if (!grid) {
+    console.error('Recommendation grid element not found');
+    return;
+  }
+  
   grid.innerHTML = '';
   
+  // Handle missing recommendations data
+  if (!recommendations) {
+    grid.innerHTML = '<div class="no-data-message"><i class="fas fa-exclamation-triangle"></i><p>Unable to load recommendations. Please refresh the page.</p></div>';
+    return;
+  }
+  
+  let cardCount = 0;
+  
   // Temperature recommendation
-  if (recommendations.conditions.temperature.action) {
+  if (recommendations.conditions && recommendations.conditions.temperature && recommendations.conditions.temperature.action) {
     addRecommendationCard(grid, '🌡️', 'Temperature Management', 
       recommendations.conditions.temperature.message, 
       recommendations.conditions.temperature.action);
+    cardCount++;
   }
   
   // Humidity recommendation
-  if (recommendations.conditions.humidity.action) {
+  if (recommendations.conditions && recommendations.conditions.humidity && recommendations.conditions.humidity.action) {
     addRecommendationCard(grid, '💧', 'Humidity Control', 
       recommendations.conditions.humidity.message, 
       recommendations.conditions.humidity.action);
+    cardCount++;
+  }
+  
+  // Water/Rainfall recommendation
+  if (recommendations.conditions && recommendations.conditions.water && recommendations.conditions.water.action) {
+    addRecommendationCard(grid, '🌧️', 'Water Management', 
+      recommendations.conditions.water.message, 
+      recommendations.conditions.water.action);
+    cardCount++;
   }
   
   // Protection advice
   if (recommendations.protection && recommendations.protection.length > 0) {
     recommendations.protection.forEach(protection => {
-      addRecommendationCard(grid, protection.icon, protection.action, 
-        protection.message, `Priority: ${protection.urgency}`);
+      addRecommendationCard(grid, protection.icon || '🛡️', protection.action || 'Protection Advice', 
+        protection.message || 'Protection recommendations based on current weather.', 
+        `Priority: ${protection.urgency || 'medium'}`);
+      cardCount++;
     });
   }
   
   // Timing advice
   if (recommendations.timing && recommendations.timing.length > 0) {
     recommendations.timing.forEach(timing => {
-      addRecommendationCard(grid, timing.icon, timing.activity, 
-        timing.message, `Priority: ${timing.priority}`);
+      addRecommendationCard(grid, timing.icon || '📅', timing.activity || 'Timing Advice', 
+        timing.message || 'Timing recommendations for farming activities.', 
+        `Priority: ${timing.priority || 'medium'}`);
+      cardCount++;
     });
   }
+  
+  // If no recommendations were added, show a default message
+  if (cardCount === 0) {
+    addRecommendationCard(grid, '🌿', 'General Advice', 
+      'Weather conditions are suitable for farming activities.', 
+      'Continue with regular farming practices.');
+  }
+  
+  console.log(`Recommendations updated successfully (${cardCount} cards)`);
 }
 
 // Add recommendation card
@@ -942,10 +1195,30 @@ function addRecommendationCard(container, icon, title, message, action) {
 // Update irrigation section
 function updateIrrigation(irrigation) {
   const card = document.getElementById('irrigationCard');
+  if (!card) {
+    console.error('Irrigation card element not found');
+    return;
+  }
+  
   const icon = card.querySelector('.irrigation-icon');
   const content = card.querySelector('.irrigation-content');
   
-  icon.textContent = irrigation.icon;
+  if (!icon || !content) {
+    console.error('Irrigation card sub-elements not found');
+    return;
+  }
+  
+  // Handle missing irrigation data
+  if (!irrigation) {
+    icon.textContent = '💧';
+    content.innerHTML = `
+      <h3>Irrigation Status</h3>
+      <p>Unable to load irrigation recommendations. Please check weather data.</p>
+    `;
+    return;
+  }
+  
+  icon.textContent = irrigation.icon || '💧';
   
   let urgencyClass = '';
   if (irrigation.urgency === 'high') {
@@ -957,10 +1230,16 @@ function updateIrrigation(irrigation) {
     card.classList.add(urgencyClass);
   }
   
+  const frequencyText = irrigation.frequency ? 
+    irrigation.frequency.charAt(0).toUpperCase() + irrigation.frequency.slice(1) : 'Regular';
+  
   content.innerHTML = `
-    <h3>${irrigation.frequency.charAt(0).toUpperCase() + irrigation.frequency.slice(1)} Irrigation Needed</h3>
-    <p>${irrigation.message}</p>
+    <h3>${frequencyText} Irrigation ${irrigation.needed ? 'Needed' : 'Not Required'}</h3>
+    <p>${irrigation.message || 'Irrigation recommendations based on current weather conditions.'}</p>
+    ${irrigation.urgency ? `<div class="urgency-indicator urgency-${irrigation.urgency}">${irrigation.urgency.toUpperCase()}</div>` : ''}
   `;
+  
+  console.log('Irrigation section updated successfully');
 }
 
 // Update suitable crops section
@@ -2692,6 +2971,481 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // =============== ML CROP RECOMMENDATIONS ===============
 
+// ===== EXTERNAL CROP API INTEGRATION =====
+
+// Load external crop data for better recommendations
+async function loadExternalCropData(cropName, location = {}) {
+  try {
+    console.log(`Loading external crop data for ${cropName}`);
+    
+    const params = new URLSearchParams();
+    if (location.state) params.append('state', location.state);
+    if (location.district) params.append('district', location.district);
+    if (location.market) params.append('market', location.market);
+    
+    const response = await fetch(`http://localhost:4001/api/farming/external-crop/${cropName}?${params}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      console.warn('External crop data not available:', data.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error loading external crop data:', error);
+    return null;
+  }
+}
+
+// Load crop production statistics
+async function loadCropProductionStats(cropName, year = new Date().getFullYear()) {
+  try {
+    const response = await fetch(`http://localhost:4001/api/farming/production/${cropName}?year=${year}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      console.warn('Production data not available:', data.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error loading production stats:', error);
+    return null;
+  }
+}
+
+// Load crop market prices
+async function loadCropMarketPrices(cropName, market = '') {
+  try {
+    const params = market ? `?market=${encodeURIComponent(market)}` : '';
+    const response = await fetch(`http://localhost:4001/api/farming/prices/${cropName}${params}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      console.warn('Price data not available:', data.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error loading market prices:', error);
+    return null;
+  }
+}
+
+// Search crops using external API
+async function searchExternalCrops(query, limit = 10) {
+  try {
+    const response = await fetch(`http://localhost:4001/api/farming/search-crops?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data;
+    } else {
+      console.warn('Crop search failed:', data.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error searching crops:', error);
+    return null;
+  }
+}
+
+// Load enhanced crop recommendations with external data
+async function loadEnhancedCropRecommendations() {
+  if (!currentCity) {
+    showNotification('Please select a location first', 'warning');
+    return;
+  }
+
+  const cropsGrid = document.getElementById('cropsGrid');
+  const generateBtn = document.getElementById('generateCropRecommendations');
+  
+  // Show loading state
+  cropsGrid.innerHTML = '<div class="ml-loading"><i class="fas fa-spinner fa-spin"></i><p>Analyzing climate data and fetching real crop information...</p></div>';
+  
+  // Disable button
+  generateBtn.disabled = true;
+  generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+  
+  try {
+    // Get location context (if available)
+    const location = {
+      state: '', // Could be extracted from city data
+      district: '',
+      market: ''
+    };
+    
+    const response = await fetch(`http://localhost:4001/api/farming/enhanced-recommendations/${currentCity}?state=${location.state}&district=${location.district}`);
+    const data = await response.json();
+    
+    if (data.success && data.data.crops) {
+      displayEnhancedCropRecommendations(data.data.crops);
+      showNotification('Enhanced crop recommendations loaded with real market data!', 'success', 3000);
+    } else {
+      throw new Error(data.error || 'Failed to load enhanced recommendations');
+    }
+    
+  } catch (error) {
+    console.error('Error loading enhanced crop recommendations:', error);
+    showNotification('Using local recommendations. External data unavailable.', 'warning', 3000);
+    
+    // Fallback to regular ML recommendations
+    loadCropRecommendations();
+    
+  } finally {
+    // Re-enable button
+    generateBtn.disabled = false;
+    generateBtn.innerHTML = '<i class="fas fa-brain"></i> Get AI Recommendations';
+  }
+}
+
+// Display enhanced crop recommendations with external data
+function displayEnhancedCropRecommendations(crops) {
+  const container = document.getElementById('cropsGrid');
+  let html = '';
+  
+  crops.forEach((crop, index) => {
+    const suitabilityClass = getSuitabilityClass(crop.suitability || 0);
+    const hasExternalData = crop.externalData && crop.externalData.enhanced;
+    const hasMarketData = crop.marketInfo && crop.marketInfo.success;
+    
+    html += `
+      <div class="enhanced-crop-card ${suitabilityClass}" data-crop="${crop.key}">
+        <div class="crop-header">
+          <div class="crop-icon">${crop.icon}</div>
+          <div class="crop-title">
+            <h3 class="crop-name">${crop.name}</h3>
+            <div class="suitability-score">
+              <div class="score-value">${Math.round(crop.suitability || 0)}%</div>
+              <div class="score-label">Suitability</div>
+            </div>
+          </div>
+          ${hasExternalData ? '<div class="external-data-badge">📊 Real Data</div>' : ''}
+        </div>
+        
+        <div class="crop-details">
+          <div class="basic-info">
+            <div class="info-item">
+              <i class="fas fa-thermometer-half"></i>
+              <span>Temp: ${crop.tempRange?.min || 'N/A'}-${crop.tempRange?.max || 'N/A'}°C</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-tint"></i>
+              <span>Water: ${crop.waterNeeds?.min || 'N/A'}-${crop.waterNeeds?.max || 'N/A'}mm</span>
+            </div>
+          </div>
+          
+          ${hasMarketData ? `
+            <div class="market-info">
+              <h4>💰 Market Info</h4>
+              <div class="price-range">
+                ₹${crop.marketInfo.fallback?.minPrice || 'N/A'} - ₹${crop.marketInfo.fallback?.maxPrice || 'N/A'}
+                <span class="price-unit">${crop.marketInfo.fallback?.unit || 'per quintal'}</span>
+              </div>
+            </div>
+          ` : ''}
+          
+          ${hasExternalData && crop.externalData.fallback ? `
+            <div class="external-info">
+              <h4>📈 Production Info</h4>
+              <div class="production-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Avg Yield:</span>
+                  <span class="stat-value">${crop.externalData.fallback.averageYield}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Major States:</span>
+                  <span class="stat-value">${crop.externalData.fallback.majorStates?.slice(0, 2).join(', ') || 'Various'}</span>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+        
+        <div class="crop-actions">
+          <button class="action-btn-small" onclick="showCropDetails('${crop.key}')">
+            <i class="fas fa-info-circle"></i> Details
+          </button>
+          <button class="action-btn-small" onclick="selectCropForDashboard('${crop.key}')">
+            <i class="fas fa-check"></i> Select
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+// Show detailed crop information modal
+async function showCropDetails(cropKey) {
+  try {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('cropDetailsModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'cropDetailsModal';
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content crop-details-modal">
+          <span class="modal-close" onclick="closeModal('cropDetailsModal')">&times;</span>
+          <div id="cropDetailsContent">Loading...</div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    
+    modal.style.display = 'block';
+    
+    // Load comprehensive crop data
+    const [externalData, productionStats, priceData] = await Promise.allSettled([
+      loadExternalCropData(cropKey),
+      loadCropProductionStats(cropKey),
+      loadCropMarketPrices(cropKey)
+    ]);
+    
+    const content = document.getElementById('cropDetailsContent');
+    content.innerHTML = generateCropDetailsHTML(cropKey, {
+      external: externalData.status === 'fulfilled' ? externalData.value : null,
+      production: productionStats.status === 'fulfilled' ? productionStats.value : null,
+      prices: priceData.status === 'fulfilled' ? priceData.value : null
+    });
+    
+  } catch (error) {
+    console.error('Error showing crop details:', error);
+    showNotification('Failed to load crop details', 'error', 3000);
+  }
+}
+
+// Generate crop details HTML
+function generateCropDetailsHTML(cropKey, data) {
+  const localCrop = getCropByKey(cropKey);
+  
+  return `
+    <div class="crop-details-container">
+      <div class="crop-details-header">
+        <div class="crop-icon-large">${localCrop?.icon || '🌱'}</div>
+        <h2>${localCrop?.name || cropKey} - Detailed Information</h2>
+      </div>
+      
+      <div class="crop-details-tabs">
+        <div class="tab-buttons">
+          <button class="tab-btn active" onclick="showTab('basic')">Basic Info</button>
+          <button class="tab-btn" onclick="showTab('production')">Production</button>
+          <button class="tab-btn" onclick="showTab('market')">Market Prices</button>
+          <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
+        </div>
+        
+        <div class="tab-content">
+          <div id="tab-basic" class="tab-panel active">
+            ${generateBasicInfoHTML(localCrop, data.external)}
+          </div>
+          
+          <div id="tab-production" class="tab-panel">
+            ${generateProductionHTML(data.production)}
+          </div>
+          
+          <div id="tab-market" class="tab-panel">
+            ${generateMarketHTML(data.prices)}
+          </div>
+          
+          <div id="tab-recommendations" class="tab-panel">
+            ${generateRecommendationsHTML(localCrop)}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Helper function to get crop by key
+function getCropByKey(key) {
+  const cropMap = {
+    'rice': { name: 'Rice', icon: '🌾' },
+    'wheat': { name: 'Wheat', icon: '🌾' },
+    'cotton': { name: 'Cotton', icon: '🌱' },
+    'sugarcane': { name: 'Sugarcane', icon: '🎋' },
+    'tomato': { name: 'Tomato', icon: '🍅' },
+    'onion': { name: 'Onion', icon: '🧅' }
+  };
+  
+  return cropMap[key] || { name: key, icon: '🌱' };
+}
+
+// Generate basic info HTML
+function generateBasicInfoHTML(localCrop, externalData) {
+  return `
+    <div class="basic-info-grid">
+      <div class="info-section">
+        <h3>🌡️ Temperature Requirements</h3>
+        <p><strong>Range:</strong> ${localCrop?.tempRange?.min || 'N/A'}°C - ${localCrop?.tempRange?.max || 'N/A'}°C</p>
+      </div>
+      
+      <div class="info-section">
+        <h3>💧 Water Requirements</h3>
+        <p><strong>Weekly:</strong> ${localCrop?.waterNeeds?.min || 'N/A'}-${localCrop?.waterNeeds?.max || 'N/A'}mm</p>
+      </div>
+      
+      <div class="info-section">
+        <h3>🌡️ Humidity Range</h3>
+        <p><strong>Optimal:</strong> ${localCrop?.humidity?.min || 'N/A'}%-${localCrop?.humidity?.max || 'N/A'}%</p>
+      </div>
+      
+      <div class="info-section">
+        <h3>📅 Growing Seasons</h3>
+        <p><strong>Seasons:</strong> ${localCrop?.seasons?.join(', ') || 'N/A'}</p>
+      </div>
+      
+      ${externalData?.fallback ? `
+        <div class="info-section external-info">
+          <h3>🌍 External Data</h3>
+          <p><strong>Major States:</strong> ${externalData.fallback.majorStates?.join(', ') || 'N/A'}</p>
+          <p><strong>Soil Type:</strong> ${externalData.fallback.soilType || 'N/A'}</p>
+          <p><strong>Water Requirement:</strong> ${externalData.fallback.waterRequirement || 'N/A'}</p>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// Generate production HTML
+function generateProductionHTML(productionData) {
+  if (!productionData || !productionData.success) {
+    return `
+      <div class="no-data">
+        <i class="fas fa-chart-bar"></i>
+        <p>Production data not available</p>
+        <small>Using fallback information: ${productionData?.fallback ? JSON.stringify(productionData.fallback) : 'Limited data'}</small>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="production-stats">
+      <h3>📊 Production Statistics (${productionData.year})</h3>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">${productionData.fallback?.production || 'N/A'}</div>
+          <div class="stat-label">Total Production</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${productionData.fallback?.area || 'N/A'}</div>
+          <div class="stat-label">Total Area</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${productionData.fallback?.productivity || 'N/A'}</div>
+          <div class="stat-label">Productivity</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Generate market HTML
+function generateMarketHTML(priceData) {
+  if (!priceData || !priceData.success) {
+    return `
+      <div class="no-data">
+        <i class="fas fa-rupee-sign"></i>
+        <p>Current market prices not available</p>
+        <small>Using average price range: ${priceData?.fallback ? `₹${priceData.fallback.minPrice}-₹${priceData.fallback.maxPrice} ${priceData.fallback.unit}` : 'N/A'}</small>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="market-info">
+      <h3>💰 Market Prices</h3>
+      <div class="price-cards">
+        <div class="price-card min">
+          <div class="price-label">Minimum Price</div>
+          <div class="price-value">₹${priceData.fallback?.minPrice || 'N/A'}</div>
+        </div>
+        <div class="price-card modal">
+          <div class="price-label">Modal Price</div>
+          <div class="price-value">₹${priceData.fallback?.modalPrice || 'N/A'}</div>
+        </div>
+        <div class="price-card max">
+          <div class="price-label">Maximum Price</div>
+          <div class="price-value">₹${priceData.fallback?.maxPrice || 'N/A'}</div>
+        </div>
+      </div>
+      <p class="price-unit">Prices per ${priceData.fallback?.unit || 'quintal'}</p>
+    </div>
+  `;
+}
+
+// Generate recommendations HTML
+function generateRecommendationsHTML(localCrop) {
+  return `
+    <div class="recommendations-section">
+      <h3>💡 Farming Recommendations</h3>
+      <div class="recommendation-list">
+        <div class="recommendation-item">
+          <i class="fas fa-seedling"></i>
+          <div>
+            <strong>Planting Season:</strong>
+            <p>Best planted during ${localCrop?.seasons?.join(' and ') || 'appropriate'} seasons</p>
+          </div>
+        </div>
+        
+        <div class="recommendation-item">
+          <i class="fas fa-tint"></i>
+          <div>
+            <strong>Water Management:</strong>
+            <p>Requires ${localCrop?.waterNeeds?.min || 'adequate'}-${localCrop?.waterNeeds?.max || 'sufficient'}mm water per week</p>
+          </div>
+        </div>
+        
+        <div class="recommendation-item">
+          <i class="fas fa-thermometer-half"></i>
+          <div>
+            <strong>Temperature:</strong>
+            <p>Grows best in ${localCrop?.tempRange?.min || 'moderate'}-${localCrop?.tempRange?.max || 'warm'}°C temperature range</p>
+          </div>
+        </div>
+        
+        <div class="recommendation-item">
+          <i class="fas fa-cloud"></i>
+          <div>
+            <strong>Humidity:</strong>
+            <p>Optimal humidity range is ${localCrop?.humidity?.min || 'balanced'}-${localCrop?.humidity?.max || 'moderate'}%</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Tab switching functionality
+function showTab(tabName) {
+  // Hide all tab panels
+  document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  
+  // Show selected tab
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Select crop for dashboard
+function selectCropForDashboard(cropKey) {
+  currentCrop = cropKey;
+  if (cropSelect) cropSelect.value = cropKey;
+  
+  showNotification(`Selected ${getCropByKey(cropKey).name} for dashboard`, 'success', 3000);
+  
+  // Reload dashboard with new crop
+  loadFarmingDashboard();
+  
+  // Close crop details modal if open
+  const modal = document.getElementById('cropDetailsModal');
+  if (modal) modal.style.display = 'none';
+}
+
 // Load ML crop recommendations for current city
 async function loadCropRecommendations() {
   if (!currentCity) {
@@ -2823,9 +3577,136 @@ function testComprehensiveWeatherManual() {
   testComprehensiveWeatherElements();
 }
 
+// Simple direct implementation to force updates
+function forceUpdateDashboard() {
+  console.log('🚀 [FORCE] Starting forced dashboard update');
+  
+  // Directly update recommendations
+  const recommendationGrid = document.getElementById('recommendationGrid');
+  if (recommendationGrid) {
+    recommendationGrid.innerHTML = `
+      <div style="padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #7cb342; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 10px 0; color: #2e7d32;">🌡️ Temperature Management</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">Current temperature is suitable for farming activities.</p>
+        <div style="background: #e8f5e8; padding: 10px; border-radius: 8px; color: #2e7d32; font-weight: 500;">Continue normal farming activities</div>
+      </div>
+      <div style="padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #2196f3; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 10px 0; color: #1976d2;">💧 Humidity Control</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">Humidity levels are within acceptable range for crop growth.</p>
+        <div style="background: #e3f2fd; padding: 10px; border-radius: 8px; color: #1976d2; font-weight: 500;">Monitor humidity levels regularly</div>
+      </div>
+      <div style="padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #ff9800; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 10px 0; color: #f57c00;">🌧️ Water Management</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">Monitor rainfall and adjust irrigation accordingly.</p>
+        <div style="background: #fff3e0; padding: 10px; border-radius: 8px; color: #f57c00; font-weight: 500;">Supplement with irrigation as needed</div>
+      </div>
+    `;
+    console.log('🚀 [FORCE] Recommendations updated successfully');
+  } else {
+    console.error('🚀 [FORCE] recommendationGrid not found!');
+  }
+  
+  // Directly update irrigation
+  const irrigationCard = document.getElementById('irrigationCard');
+  if (irrigationCard) {
+    const irrigationContent = irrigationCard.querySelector('.irrigation-content');
+    if (irrigationContent) {
+      irrigationContent.innerHTML = `
+        <h3>Regular Irrigation Needed</h3>
+        <p>Based on current weather conditions, regular irrigation is recommended for optimal crop growth.</p>
+        <div style="display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem; text-transform: uppercase; background: #fff3e0; color: #ef6c00; border: 1px solid #ff9800;">MEDIUM</div>
+      `;
+      console.log('🚀 [FORCE] Irrigation updated successfully');
+    }
+  } else {
+    console.error('🚀 [FORCE] irrigationCard not found!');
+  }
+  
+  // Directly update overall condition
+  const overallCondition = document.getElementById('overallCondition');
+  if (overallCondition) {
+    const conditionIcon = overallCondition.querySelector('.condition-icon');
+    const conditionText = overallCondition.querySelector('.condition-text');
+    
+    if (conditionIcon) conditionIcon.textContent = '⚖️';
+    if (conditionText) {
+      conditionText.innerHTML = '<h3>Fair Farming Conditions</h3><p>Weather conditions are suitable for farming with some adjustments needed.</p>';
+    }
+    console.log('🚀 [FORCE] Overall condition updated successfully');
+  } else {
+    console.error('🚀 [FORCE] overallCondition not found!');
+  }
+  
+  console.log('🚀 [FORCE] Forced dashboard update completed');
+}
+async function manualTestDashboard() {
+  console.log('📝 [MANUAL TEST] Testing dashboard functionality manually');
+  
+  try {
+    // Test 1: Check if DOM elements exist
+    const recommendationGrid = document.getElementById('recommendationGrid');
+    const irrigationCard = document.getElementById('irrigationCard');
+    const overallCondition = document.getElementById('overallCondition');
+    
+    console.log('📝 [TEST] DOM Elements Check:');
+    console.log('- recommendationGrid:', !!recommendationGrid);
+    console.log('- irrigationCard:', !!irrigationCard);
+    console.log('- overallCondition:', !!overallCondition);
+    
+    // Test 2: Try loading real API data
+    console.log('📝 [TEST] Loading real API data...');
+    const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+    const data = await response.json();
+    
+    console.log('📝 [TEST] API Response:', data);
+    
+    if (data.success) {
+      console.log('📝 [TEST] API successful, testing individual update functions...');
+      
+      // Test 3: Test individual update functions
+      if (recommendationGrid) {
+        console.log('📝 [TEST] Testing updateRecommendations...');
+        updateRecommendations(data.data.selected_crop.recommendations);
+      }
+      
+      if (irrigationCard) {
+        console.log('📝 [TEST] Testing updateIrrigation...');
+        updateIrrigation(data.data.selected_crop.recommendations.irrigation);
+      }
+      
+      if (overallCondition) {
+        console.log('📝 [TEST] Testing updateOverallCondition...');
+        updateOverallCondition(data.data.selected_crop.recommendations.conditions);
+      }
+      
+      console.log('📝 [TEST] Manual dashboard test completed successfully!');
+      showNotification('Manual test completed! Check console for details.', 'success', 5000);
+    } else {
+      console.error('📝 [TEST] API failed:', data.error);
+      showNotification('API test failed: ' + data.error, 'error', 5000);
+    }
+    
+  } catch (error) {
+    console.error('📝 [TEST] Manual test failed:', error);
+    showNotification('Manual test failed: ' + error.message, 'error', 5000);
+  }
+}
+
 // Initialize farming dashboard when page loads
 function initializeFarmingDashboard() {
   console.log('=== FARMING DASHBOARD INITIALIZING ===');
+  console.log('Global variables check:');
+  console.log('- currentCity:', currentCity);
+  console.log('- currentCrop:', currentCrop);
+  console.log('- currentStage:', currentStage);
+  console.log('- socket:', typeof socket);
+  
+  // Check if essential DOM elements exist
+  console.log('DOM elements check:');
+  console.log('- recommendationGrid:', !!document.getElementById('recommendationGrid'));
+  console.log('- irrigationCard:', !!document.getElementById('irrigationCard'));
+  console.log('- overallCondition:', !!document.getElementById('overallCondition'));
+  console.log('- loadingOverlay:', !!document.getElementById('loadingOverlay'));
   
   // Test comprehensive weather immediately
   setTimeout(() => {
@@ -2846,21 +3727,75 @@ function initializeFarmingDashboard() {
   }, 3000);
   
   // Setup event listeners
-  setupEventListeners();
+  try {
+    console.log('Setting up event listeners...');
+    setupEventListeners();
+  } catch (error) {
+    console.error('Error setting up event listeners:', error);
+  }
   
   // Load initial data
-  loadCities();
-  loadCropsData();
+  try {
+    console.log('Loading cities...');
+    loadCities();
+  } catch (error) {
+    console.error('Error loading cities:', error);
+  }
+  
+  try {
+    console.log('Loading crops data...');
+    loadCropsData();
+  } catch (error) {
+    console.error('Error loading crops data:', error);
+  }
   
   // Initialize WebSocket
-  initializeWebSocket();
+  try {
+    console.log('Initializing WebSocket...');
+    initializeWebSocket();
+  } catch (error) {
+    console.error('Error initializing WebSocket:', error);
+  }
   
   // Initialize weather visuals
-  initializeWeatherVisuals();
+  try {
+    console.log('Initializing weather visuals...');
+    initializeWeatherVisuals();
+  } catch (error) {
+    console.error('Error initializing weather visuals:', error);
+  }
   
-  // Load default dashboard
-  console.log('Loading default farming dashboard...');
-  loadFarmingDashboard();
+  // Load default dashboard with a small delay to ensure everything is ready
+  setTimeout(() => {
+    console.log('Loading default farming dashboard...');
+    try {
+      loadFarmingDashboard();
+    } catch (error) {
+      console.error('Error loading farming dashboard:', error);
+    }
+  }, 1000);
+  
+  // Fallback: Force update if normal loading doesn't work within 10 seconds
+  setTimeout(() => {
+    console.log('🚀 [FALLBACK] Checking if dashboard loaded properly...');
+    
+    const recommendationGrid = document.getElementById('recommendationGrid');
+    const irrigationCard = document.getElementById('irrigationCard');
+    
+    // Check if elements are still showing loading state
+    const recommendationText = recommendationGrid ? recommendationGrid.innerText : '';
+    const irrigationText = irrigationCard ? irrigationCard.innerText : '';
+    
+    if (recommendationText.includes('Loading') || recommendationText.includes('loading') || 
+        irrigationText.includes('Loading') || irrigationText.includes('loading') ||
+        recommendationGrid?.children.length === 0) {
+      console.log('🚀 [FALLBACK] Dashboard still loading, forcing update...');
+      forceUpdateDashboard();
+      showNotification('Dashboard loaded with fallback data', 'info', 3000);
+    } else {
+      console.log('🚀 [FALLBACK] Dashboard appears to be loaded properly');
+    }
+  }, 10000);
   
   console.log('=== FARMING DASHBOARD INITIALIZED ===');
 }

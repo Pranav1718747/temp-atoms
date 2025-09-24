@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug Farming Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    .debug-section { margin: 20px 0; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .debug-title { color: #2e7d32; font-size: 1.5rem; margin-bottom: 15px; }
+    .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    pre { white-space: pre-wrap; word-wrap: break-word; background: #f8f9fa; padding: 10px; border-radius: 5px; }
+    button { padding: 10px 20px; margin: 5px; background: #7cb342; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #689f38; }
+    .recommendation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 20px; }
+    .irrigation-card { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); padding: 20px; border-radius: 15px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🔧 Farming Dashboard Debug Tool</h1>
+  
+  <div class="debug-section">
+    <div class="debug-title">🧪 API Testing</div>
+    <button onclick="testAPI()">Test API Endpoint</button>
+    <button onclick="testElementsExist()">Check DOM Elements</button>
+    <button onclick="loadActualDashboard()">Load Real Dashboard</button>
+    <div id="api-results"></div>
+  </div>
+
+  <div class="debug-section">
+    <div class="debug-title">🎯 Smart Recommendations Test</div>
+    <div class="recommendation-grid" id="recommendationGrid">
+      <div style="padding: 20px; background: #fff3e0; border-radius: 10px; color: #e65100;">Loading recommendations...</div>
+    </div>
+  </div>
+
+  <div class="debug-section">
+    <div class="debug-title">💧 Water Management Test</div>
+    <div class="irrigation-card" id="irrigationCard">
+      <div class="irrigation-icon" style="font-size: 2rem;">💦</div>
+      <div class="irrigation-content">
+        <h3>Loading irrigation advice...</h3>
+        <p>Calculating water requirements...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="debug-section">
+    <div class="debug-title">📊 Overall Condition Test</div>
+    <div id="overallCondition" style="padding: 20px; background: #f3e5f5; border-radius: 10px;">
+      <div class="condition-icon" style="font-size: 2rem;">⏳</div>
+      <div class="condition-text">
+        <h3>Loading farming conditions...</h3>
+        <p>Please wait while we analyze the weather</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global variables (same as farming.js)
+    let currentCity = 'Delhi';
+    let currentCrop = 'rice';
+    let currentStage = 'vegetative';
+
+    async function testAPI() {
+      const resultsDiv = document.getElementById('api-results');
+      resultsDiv.innerHTML = '<div class="info">Testing API...</div>';
+      
+      try {
+        const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          resultsDiv.innerHTML = `
+            <div class="success">✅ API Test Successful!</div>
+            <div class="info">
+              <h4>Response Structure:</h4>
+              <ul>
+                <li>City: ${data.data.city.name}</li>
+                <li>Weather Temperature: ${data.data.weather.temperature}°C</li>
+                <li>Selected Crop: ${data.data.selected_crop.type}</li>
+                <li>Has Recommendations: ${!!data.data.selected_crop.recommendations}</li>
+                <li>Has Irrigation: ${!!data.data.selected_crop.recommendations?.irrigation}</li>
+                <li>Has Conditions: ${!!data.data.selected_crop.recommendations?.conditions}</li>
+              </ul>
+            </div>
+          `;
+        } else {
+          resultsDiv.innerHTML = `<div class="error">❌ API Error: ${data.error}</div>`;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = `<div class="error">❌ Network Error: ${error.message}</div>`;
+      }
+    }
+
+    function testElementsExist() {
+      const resultsDiv = document.getElementById('api-results');
+      const elements = [
+        'recommendationGrid',
+        'irrigationCard', 
+        'overallCondition'
+      ];
+      
+      let html = '<div class="info">DOM Elements Check:</div>';
+      elements.forEach(id => {
+        const element = document.getElementById(id);
+        const exists = !!element;
+        html += `<div class="${exists ? 'success' : 'error'}">
+          ${id}: ${exists ? '✅ Found' : '❌ Missing'}
+        </div>`;
+      });
+      
+      resultsDiv.innerHTML = html;
+    }
+
+    async function loadActualDashboard() {
+      try {
+        const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          // Update recommendations using the same logic as farming.js
+          updateRecommendations(data.data.selected_crop.recommendations);
+          
+          // Update irrigation using the same logic as farming.js  
+          updateIrrigation(data.data.selected_crop.recommendations.irrigation);
+          
+          // Update overall condition
+          updateOverallCondition(data.data.selected_crop.recommendations.conditions);
+          
+          document.getElementById('api-results').innerHTML = '<div class="success">✅ Dashboard loaded successfully!</div>';
+        }
+      } catch (error) {
+        document.getElementById('api-results').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+      }
+    }
+
+    // Copy the update functions from farming.js
+    function updateRecommendations(recommendations) {
+      const grid = document.getElementById('recommendationGrid');
+      if (!grid) {
+        console.error('Recommendation grid element not found');
+        return;
+      }
+      
+      grid.innerHTML = '';
+      
+      if (!recommendations) {
+        grid.innerHTML = '<div style="padding: 20px; background: #ffebee; color: #c62828; border-radius: 10px;"><i class="fas fa-exclamation-triangle"></i><p>Unable to load recommendations. Please refresh the page.</p></div>';
+        return;
+      }
+      
+      let cardCount = 0;
+      
+      // Temperature recommendation
+      if (recommendations.conditions && recommendations.conditions.temperature && recommendations.conditions.temperature.action) {
+        addRecommendationCard(grid, '🌡️', 'Temperature Management', 
+          recommendations.conditions.temperature.message, 
+          recommendations.conditions.temperature.action);
+        cardCount++;
+      }
+      
+      // Humidity recommendation
+      if (recommendations.conditions && recommendations.conditions.humidity && recommendations.conditions.humidity.action) {
+        addRecommendationCard(grid, '💧', 'Humidity Control', 
+          recommendations.conditions.humidity.message, 
+          recommendations.conditions.humidity.action);
+        cardCount++;
+      }
+      
+      // Water/Rainfall recommendation
+      if (recommendations.conditions && recommendations.conditions.water && recommendations.conditions.water.action) {
+        addRecommendationCard(grid, '🌧️', 'Water Management', 
+          recommendations.conditions.water.message, 
+          recommendations.conditions.water.action);
+        cardCount++;
+      }
+      
+      // If no recommendations were added, show a default message
+      if (cardCount === 0) {
+        addRecommendationCard(grid, '🌿', 'General Advice', 
+          'Weather conditions are suitable for farming activities.', 
+          'Continue with regular farming practices.');
+      }
+      
+      console.log(`Recommendations updated successfully (${cardCount} cards)`);
+    }
+
+    function addRecommendationCard(container, icon, title, message, action) {
+      const card = document.createElement('div');
+      card.style.cssText = 'padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #7cb342;';
+      card.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; color: #2e7d32;">${icon} ${title}</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">${message}</p>
+        <div style="background: #e8f5e8; padding: 10px; border-radius: 8px; color: #2e7d32; font-weight: 500;">${action}</div>
+      `;
+      container.appendChild(card);
+    }
+
+    function updateIrrigation(irrigation) {
+      const card = document.getElementById('irrigationCard');
+      if (!card) {
+        console.error('Irrigation card element not found');
+        return;
+      }
+      
+      const icon = card.querySelector('.irrigation-icon');
+      const content = card.querySelector('.irrigation-content');
+      
+      if (!icon || !content) {
+        console.error('Irrigation card sub-elements not found');
+        return;
+      }
+      
+      if (!irrigation) {
+        icon.textContent = '💧';
+        content.innerHTML = `
+          <h3>Irrigation Status</h3>
+          <p>Unable to load irrigation recommendations. Please check weather data.</p>
+        `;
+        return;
+      }
+      
+      icon.textContent = irrigation.icon || '💧';
+      
+      const frequencyText = irrigation.frequency ? 
+        irrigation.frequency.charAt(0).toUpperCase() + irrigation.frequency.slice(1) : 'Regular';
+      
+      content.innerHTML = `
+        <h3>${frequencyText} Irrigation ${irrigation.needed ? 'Needed' : 'Not Required'}</h3>
+        <p>${irrigation.message || 'Irrigation recommendations based on current weather conditions.'}</p>
+        ${irrigation.urgency ? `<div style="display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem; text-transform: uppercase; background: #fff3e0; color: #ef6c00; border: 1px solid #ff9800;">${irrigation.urgency.toUpperCase()}</div>` : ''}
+      `;
+      
+      console.log('Irrigation section updated successfully');
+    }
+
+    function updateOverallCondition(conditions) {
+      const container = document.getElementById('overallCondition');
+      if (!container) return;
+      
+      const iconElement = container.querySelector('.condition-icon');
+      const textElement = container.querySelector('.condition-text');
+      
+      if (!iconElement || !textElement) return;
+      
+      const conditionInfo = {
+        good: {
+          icon: '🌟',
+          title: 'Excellent Farming Conditions!',
+          message: 'Weather is perfect for your crops. Great time for farming activities.'
+        },
+        fair: {
+          icon: '⚖️',
+          title: 'Fair Farming Conditions',
+          message: 'Weather is okay. Some adjustments may be needed for optimal growth.'
+        },
+        poor: {
+          icon: '⚠️',
+          title: 'Challenging Conditions',
+          message: 'Weather needs attention. Follow recommendations carefully.'
+        }
+      };
+      
+      const info = conditionInfo[conditions?.overall] || conditionInfo.fair;
+      
+      iconElement.textContent = info.icon;
+      textElement.innerHTML = `<h3>${info.title}</h3><p>${info.message}</p>`;
+    }
+
+    // Auto-run tests
+    window.onload = () => {
+      testElementsExist();
+      setTimeout(testAPI, 1000);
+    };
+  </script>
+</body>
+</html>

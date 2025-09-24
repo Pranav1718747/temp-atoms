@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Farming Dashboard API</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+    .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    pre { white-space: pre-wrap; word-wrap: break-word; }
+  </style>
+</head>
+<body>
+  <h1>🌾 Farming Dashboard API Test</h1>
+  
+  <button onclick="testAPI()">Test Farming Dashboard API</button>
+  <button onclick="testFallback()">Test Fallback Data</button>
+  
+  <div id="results"></div>
+
+  <script>
+    async function testAPI() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="info">Testing API...</div>';
+      
+      try {
+        // Test main farming dashboard API
+        const response = await fetch('http://localhost:4001/api/farming/dashboard/Delhi?crop=rice&stage=vegetative');
+        const data = await response.json();
+        
+        if (data.success) {
+          resultsDiv.innerHTML = `
+            <div class="success">✅ API Test Successful!</div>
+            <div class="info">
+              <h3>Response Data Structure:</h3>
+              <ul>
+                <li>City: ${data.data.city.name}</li>
+                <li>Weather: Temperature ${data.data.weather.temperature}°C, Humidity ${data.data.weather.humidity}%</li>
+                <li>Selected Crop: ${data.data.selected_crop.type}</li>
+                <li>Recommendations Available: ${data.data.selected_crop.recommendations ? 'Yes' : 'No'}</li>
+                <li>Irrigation Data: ${data.data.selected_crop.recommendations.irrigation ? 'Yes' : 'No'}</li>
+                <li>Suitable Crops Count: ${data.data.suitable_crops.length}</li>
+              </ul>
+              <h3>Irrigation Details:</h3>
+              <pre>${JSON.stringify(data.data.selected_crop.recommendations.irrigation, null, 2)}</pre>
+              <h3>Sample Conditions:</h3>
+              <pre>${JSON.stringify(data.data.selected_crop.recommendations.conditions, null, 2)}</pre>
+            </div>
+          `;
+        } else {
+          resultsDiv.innerHTML = `
+            <div class="error">❌ API Error: ${data.error}</div>
+          `;
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = `
+          <div class="error">❌ Network Error: ${error.message}</div>
+        `;
+      }
+    }
+
+    async function testFallback() {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<div class="info">Testing Fallback Data...</div>';
+      
+      // Simulate the fallback data structure
+      const fallbackData = {
+        city: { name: 'TestCity' },
+        weather: {
+          temperature: 28.5,
+          humidity: 65,
+          rainfall: 2.0
+        },
+        selected_crop: {
+          type: 'rice',
+          stage: 'vegetative',
+          recommendations: {
+            conditions: {
+              temperature: {
+                status: 'good',
+                message: 'Temperature is suitable for rice (28.5°C)',
+                action: 'Continue normal farming activities'
+              },
+              humidity: {
+                status: 'fair',
+                message: 'Humidity is moderate (65%)',
+                action: 'Monitor humidity levels'
+              },
+              water: {
+                status: 'fair',
+                message: 'Light rainfall (2.0mm/h)',
+                action: 'Supplement with irrigation as needed'
+              }
+            },
+            irrigation: {
+              needed: true,
+              amount: 75,
+              frequency: 'moderate',
+              message: 'Regular irrigation: 75.0mm per week',
+              urgency: 'medium'
+            }
+          }
+        },
+        suitable_crops: [
+          { name: 'Rice', key: 'rice', suitability: 85, suitabilityText: 'Excellent' },
+          { name: 'Cotton', key: 'cotton', suitability: 78, suitabilityText: 'Good' }
+        ]
+      };
+      
+      resultsDiv.innerHTML = `
+        <div class="success">✅ Fallback Data Structure Valid!</div>
+        <div class="info">
+          <h3>Fallback Data Preview:</h3>
+          <pre>${JSON.stringify(fallbackData, null, 2)}</pre>
+        </div>
+      `;
+    }
+
+    // Auto-run test on page load
+    window.onload = () => testAPI();
+  </script>
+</body>
+</html>

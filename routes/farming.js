@@ -1,14 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const AICoordinator = require('../services/aiCoordinator');
 
 let farmingService;
 let climateDB;
 let climateAPI;
+let aiCoordinator;
 
 function initializeFarmingRouter(farmingServiceInstance, climateDBInstance, climateAPIInstance) {
   farmingService = farmingServiceInstance;
   climateDB = climateDBInstance;
   climateAPI = climateAPIInstance;
+  aiCoordinator = new AICoordinator();
 }
 
 // Get farming recommendations for a specific city and crop
@@ -473,6 +476,234 @@ router.get('/search-crops', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to search crops'
+    });
+  }
+});
+
+// AI AGENTS ENDPOINTS
+
+// Get comprehensive AI analysis
+router.get('/ai-analysis/:cityName', async (req, res) => {
+  try {
+    const cityName = req.params.cityName;
+    const cropType = req.query.crop || 'rice';
+    const farmSize = parseFloat(req.query.farmSize) || 1;
+    
+    // Set cache-busting headers
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
+    // Get weather data (global or local)
+    let weatherData = climateDB.getLatestWeather(cityName);
+    let cityInfo = climateDB.getCityByName(cityName);
+    let isGlobalLocation = false;
+    
+    if (!weatherData && climateAPI) {
+      try {
+        const globalWeatherResponse = await climateAPI.getWeatherForAnyLocation(cityName);
+        if (globalWeatherResponse.success && globalWeatherResponse.weather) {
+          const globalWeather = globalWeatherResponse.weather.current;
+          weatherData = {
+            temperature: globalWeather.temperature,
+            humidity: globalWeather.humidity,
+            rainfall: globalWeather.precipitation || 0,
+            data_source: 'Global Weather API'
+          };
+          isGlobalLocation = true;
+          cityInfo = {
+            name: cityName,
+            latitude: globalWeatherResponse.location?.latitude,
+            longitude: globalWeatherResponse.location?.longitude
+          };
+        }
+      } catch (globalError) {
+        console.error(`Error fetching global weather for AI analysis:`, globalError.message);
+      }
+    }
+    
+    if (!weatherData) {
+      return res.status(404).json({
+        success: false,
+        error: `No weather data available for ${cityName}`
+      });
+    }
+    
+    // Prepare farming context
+    const farmingContext = {
+      location: cityInfo,
+      farmSize: farmSize,
+      cropType: cropType,
+      history: {}, // Could be enhanced with actual farming history
+      market: {} // Could be enhanced with market data
+    };
+    
+    // Get crop data
+    const cropData = farmingService.cropData[cropType] || farmingService.cropData.rice;
+    
+    // Run AI analysis
+    const aiAnalysis = await aiCoordinator.getComprehensiveAnalysis(
+      weatherData, 
+      cropData, 
+      farmingContext
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        city: cityInfo,
+        weather: weatherData,
+        ai_analysis: aiAnalysis,
+        is_global_location: isGlobalLocation,
+        generated_at: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error generating AI analysis:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate AI analysis'
+    });
+  }
+});
+
+// Get specific AI agent analysis
+router.get('/ai-agent/:agentName/:cityName', async (req, res) => {
+  try {
+    const { agentName, cityName } = req.params;
+    const cropType = req.query.crop || 'rice';
+    const farmSize = parseFloat(req.query.farmSize) || 1;
+    
+    // Get weather data
+    let weatherData = climateDB.getLatestWeather(cityName);
+    let cityInfo = climateDB.getCityByName(cityName);
+    
+    if (!weatherData && climateAPI) {
+      try {
+        const globalWeatherResponse = await climateAPI.getWeatherForAnyLocation(cityName);
+        if (globalWeatherResponse.success && globalWeatherResponse.weather) {
+          const globalWeather = globalWeatherResponse.weather.current;
+          weatherData = {
+            temperature: globalWeather.temperature,
+            humidity: globalWeather.humidity,
+            rainfall: globalWeather.precipitation || 0
+          };
+          cityInfo = {
+            name: cityName,
+            latitude: globalWeatherResponse.location?.latitude,
+            longitude: globalWeatherResponse.location?.longitude
+          };
+        }
+      } catch (error) {
+        console.error('Error fetching global weather for agent analysis:', error.message);
+      }
+    }
+    
+    if (!weatherData) {
+      return res.status(404).json({
+        success: false,
+        error: `No weather data available for ${cityName}`
+      });
+    }
+    
+    // Prepare context
+    const context = {
+      location: cityInfo,
+      farmSize: farmSize,
+      history: {},
+      market: {}
+    };
+    
+    // Get crop data
+    const cropData = farmingService.cropData[cropType] || farmingService.cropData.rice;
+    
+    // Get specific agent analysis
+    const agentAnalysis = await aiCoordinator.getAgentAnalysis(
+      agentName, 
+      weatherData, 
+      cropData, 
+      context
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        city: cityInfo,
+        weather: weatherData,
+        agent_analysis: agentAnalysis,
+        generated_at: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting agent analysis:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get agent analysis'
+    });
+  }
+});
+
+// Get AI agent status
+router.get('/ai-status', (req, res) => {
+  try {
+    const status = aiCoordinator.getAgentStatus();
+    
+    res.json({
+      success: true,
+      data: status
+    });
+    
+  } catch (error) {
+    console.error('Error getting AI status:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get AI status'
+    });
+  }
+});
+
+// Get AI analysis history
+router.get('/ai-history', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    const history = aiCoordinator.getAnalysisHistory(limit);
+    
+    res.json({
+      success: true,
+      data: {
+        history: history,
+        count: history.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting AI history:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get AI history'
+    });
+  }
+});
+
+// Clear AI analysis history
+router.delete('/ai-history', (req, res) => {
+  try {
+    const result = aiCoordinator.clearHistory();
+    
+    res.json({
+      success: true,
+      data: result
+    });
+    
+  } catch (error) {
+    console.error('Error clearing AI history:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear AI history'
     });
   }
 });

@@ -392,6 +392,39 @@
       </div>
     </section>
 
+    <!-- AI Agents Analysis -->
+    <section class="ai-analysis-section">
+      <div class="ai-header">
+        <h2>🤖 AI Farming Agents</h2>
+        <div class="ai-controls">
+          <div class="farm-size-input">
+            <label for="farmSizeInput">Farm Size (hectares):</label>
+            <input type="number" id="farmSizeInput" value="1" min="0.1" max="1000" step="0.1" class="farming-input">
+          </div>
+          <button id="runAIAnalysis" class="ai-analysis-btn" onclick="loadAIAnalysis()">
+            <i class="fas fa-robot"></i> Run AI Analysis
+          </button>
+        </div>
+      </div>
+      <div class="ai-description">
+        <p>🧠 Our AI agents analyze weather patterns, market trends, resource optimization, and risk factors to provide you with comprehensive farming insights.</p>
+      </div>
+      <div class="ai-analysis-container" id="aiAnalysisContainer">
+        <div class="ai-placeholder">
+          <div class="ai-placeholder-icon">🤖</div>
+          <h3>AI Analysis Ready</h3>
+          <p>Click "Run AI Analysis" to get comprehensive insights from our farming AI agents including:</p>
+          <ul>
+            <li>🌱 <strong>Crop Advisory Agent</strong> - Personalized crop recommendations</li>
+            <li>🌤️ <strong>Weather Prediction Agent</strong> - Advanced weather analysis</li>
+            <li>💰 <strong>Market Intelligence Agent</strong> - Price trends and market insights</li>
+            <li>💧 <strong>Resource Optimization Agent</strong> - Water and fertilizer optimization</li>
+            <li>⚠️ <strong>Risk Assessment Agent</strong> - Pest, disease, and climate risk analysis</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <!-- Farming Alerts -->
     <section class="farming-alerts-section">
       <h2>⚠️ Important Farming Alerts</h2>

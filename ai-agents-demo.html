@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>AI Agents Demo - Climate-Sync</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #667eea;
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-weight: 600;
+            color: #667eea;
+        }
+        .control-group input, .control-group select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .ai-button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            align-self: end;
+        }
+        .ai-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(76, 175, 80, 0.4);
+        }
+        .ai-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .results {
+            margin-top: 30px;
+        }
+        .agent-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .agent-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .confidence {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        .loading .spinner {
+            font-size: 2rem;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #f44336;
+        }
+        .success {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #4caf50;
+            margin-bottom: 20px;
+        }
+        .executive-summary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+        }
+        .assessment {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .insights {
+            list-style: none;
+            padding: 0;
+        }
+        .insights li {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class=\"container\">
+        <div class=\"header\">
+            <h1>\ud83e\udd16 AI Farming Agents Demo</h1>
+            <p>Experience the power of AI-driven farming insights</p>
+        </div>
+        
+        <div class=\"controls\">
+            <div class=\"control-group\">
+                <label for=\"cityInput\">\ud83c\udf06 City:</label>
+                <input type=\"text\" id=\"cityInput\" value=\"Delhi\" placeholder=\"Enter city name\">
+            </div>
+            <div class=\"control-group\">
+                <label for=\"cropSelect\">\ud83c\udf3e Crop:</label>
+                <select id=\"cropSelect\">
+                    <option value=\"rice\">Rice</option>
+                    <option value=\"wheat\">Wheat</option>
+                    <option value=\"cotton\">Cotton</option>
+                    <option value=\"tomato\">Tomato</option>
+                    <option value=\"onion\">Onion</option>
+                    <option value=\"sugarcane\">Sugarcane</option>
+                </select>
+            </div>
+            <div class=\"control-group\">
+                <label for=\"farmSizeInput\">\ud83c\udfe1 Farm Size (hectares):</label>
+                <input type=\"number\" id=\"farmSizeInput\" value=\"1\" min=\"0.1\" max=\"1000\" step=\"0.1\">
+            </div>
+            <button class=\"ai-button\" onclick=\"runAIAnalysis()\" id=\"analyzeBtn\">
+                [AI] Run AI Analysis
+            </button>
+        </div>
+        
+        <div class=\"results\" id=\"results\"></div>
+    </div>
+    
+    <script>
+        async function runAIAnalysis() {
+            const city = document.getElementById('cityInput').value.trim();
+            const crop = document.getElementById('cropSelect').value;
+            const farmSize = document.getElementById('farmSizeInput').value;
+            const resultsDiv = document.getElementById('results');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            if (!city) {
+                alert('Please enter a city name');
+                return;
+            }
+            
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '[AI] Analyzing...';
+            
+            resultsDiv.innerHTML = `
+                <div class=\"loading\">
+                    <div class=\"spinner\">\ud83e\udde0</div>
+                    <h3>AI Agents Analyzing...</h3>
+                    <p>Our 5 AI agents are working together to provide comprehensive farming insights...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`http://localhost:4001/api/farming/ai-analysis/${encodeURIComponent(city)}?crop=${crop}&farmSize=${farmSize}`);
+                const data = await response.json();
+                
+                if (data.success && data.data.ai_analysis.success) {
+                    displayResults(data.data);
+                } else {
+                    throw new Error(data.error || data.data.ai_analysis.error || 'AI analysis failed');
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class=\"error\">
+                        <h3>\u274c AI Analysis Error</h3>
+                        <p>${error.message}</p>
+                        <p>Please check if the server is running and try again.</p>
+                    </div>
+                `;
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = '[AI] Run AI Analysis';
+            }
+        }
+        
+        function displayResults(data) {
+            const analysis = data.ai_analysis.report;
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `
+                <div class=\"success\">
+                    <strong>\u2705 AI Analysis Completed Successfully!</strong><br>
+                    Location: ${data.city.name || 'Unknown'} | 
+                    Execution Time: ${data.ai_analysis.executionTime}ms | 
+                    Confidence: ${Math.round(analysis.metadata.overallConfidence * 100)}%
+                </div>
+                
+                <div class=\"executive-summary\">
+                    <div class=\"assessment\">
+                        \ud83d\udcca Overall Assessment: ${analysis.executiveSummary.overall_assessment.toUpperCase()}
+                    </div>
+                    <h4>Key Insights:</h4>
+                    <ul class=\"insights\">
+                        ${analysis.executiveSummary.key_insights.map(insight => `<li>\u2022 ${insight}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            
+            // Add agent results
+            const agents = {
+                cropAdvisor: '\ud83c\udf31 Crop Advisory AI',
+                weatherPredictor: '\ud83c\udf24\ufe0f Weather Prediction AI',
+                marketIntelligence: '\ud83d\udcb0 Market Intelligence AI',
+                resourceOptimizer: '\ud83d\udca7 Resource Optimization AI',
+                riskAssessment: '\u26a0\ufe0f Risk Assessment AI'
+            };
+            
+            Object.entries(analysis.agentAnalyses).forEach(([agentName, agentData]) => {
+                const agentTitle = agents[agentName] || agentName;
+                
+                if (agentData.status === 'success') {
+                    const confidence = Math.round((agentData.data.confidence || 0.5) * 100);
+                    
+                    html += `
+                        <div class=\"agent-card\">
+                            <div class=\"agent-name\">${agentTitle}</div>
+                            <div class=\"confidence\">Confidence: ${confidence}%</div>
+                            <div class=\"agent-content\">
+                                ${formatAgentContent(agentData.data)}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class=\"agent-card error\">
+                            <div class=\"agent-name\">${agentTitle}</div>
+                            <p>Analysis failed: ${agentData.error}</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Add priority actions if available
+            if (analysis.priorityActions && analysis.priorityActions.length > 0) {
+                html += `
+                    <div class=\"agent-card\" style=\"border-left-color: #f44336;\">
+                        <div class=\"agent-name\">\ud83d\udea8 Priority Actions Required</div>
+                        <ul>
+                            ${analysis.priorityActions.map(action => `
+                                <li><strong>${action.action}:</strong> ${action.description} 
+                                    <span style=\"color: #f44336; font-weight: 600;\">[${action.urgency.toUpperCase()}]</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function formatAgentContent(agentData) {
+            let content = '';
+            
+            if (agentData.recommendations) {
+                content += '<h4>Recommendations:</h4><ul>';
+                agentData.recommendations.forEach(rec => {
+                    content += `<li><strong>${rec.title}:</strong> ${rec.message}</li>`;
+                });
+                content += '</ul>';
+            }
+            
+            if (agentData.predictions) {
+                content += '<h4>Predictions:</h4><ul>';
+                agentData.predictions.forEach(pred => {
+                    content += `<li><strong>${pred.title}:</strong> ${pred.message}</li>`;
+                });
+                content += '</ul>';
+            }
+            
+            if (agentData.insights) {
+                content += '<h4>Market Insights:</h4><ul>';
+                agentData.insights.forEach(insight => {
+                    content += `<li><strong>${insight.title}:</strong> ${insight.message}</li>`;
+                });
+                content += '</ul>';
+            }
+            
+            if (agentData.optimizations) {
+                content += '<h4>Optimizations:</h4><ul>';
+                agentData.optimizations.forEach(opt => {
+                    content += `<li><strong>${opt.title}:</strong> ${opt.message}</li>`;
+                });
+                content += '</ul>';
+            }
+            
+            if (agentData.risks) {
+                content += '<h4>Risk Analysis:</h4><ul>';
+                agentData.risks.forEach(risk => {
+                    const riskColor = risk.level === 'high' || risk.severity === 'high' ? '#f44336' : 
+                                     risk.level === 'medium' || risk.severity === 'medium' ? '#ff9800' : '#4caf50';
+                    content += `<li><strong style=\"color: ${riskColor}\">${risk.title}:</strong> ${risk.message}</li>`;
+                });
+                content += '</ul>';
+            }
+            
+            return content || '<p>Analysis completed - detailed insights generated.</p>';
+        }
+        
+        // Auto-run analysis on page load for demo
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                runAIAnalysis();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

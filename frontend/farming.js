@@ -199,6 +199,361 @@ document.getElementById('locationSearch').addEventListener('keydown', (e) => {
 
 // ===== END LOCATION SEARCH FUNCTIONALITY =====
 
+// ===== AI AGENTS FUNCTIONALITY =====
+
+// Global AI variables
+let aiAnalysisData = null;
+let isLoadingAIAnalysis = false;
+
+// Load AI analysis for current location
+async function loadAIAnalysis() {
+  if (isLoadingAIAnalysis) {
+    showNotification('AI analysis already in progress...', 'info');
+    return;
+  }
+  
+  try {
+    isLoadingAIAnalysis = true;
+    showAILoading();
+    
+    console.log('🤖 Loading AI analysis for:', currentCity);
+    
+    const farmSize = document.getElementById('farmSizeInput')?.value || 1;
+    const response = await fetch(
+      `http://localhost:4001/api/farming/ai-analysis/${encodeURIComponent(currentCity)}?crop=${currentCrop}&farmSize=${farmSize}`,
+      {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      aiAnalysisData = result.data.ai_analysis;
+      updateAIAnalysisDisplay(aiAnalysisData);
+      showNotification('🤖 AI analysis completed successfully!', 'success');
+    } else {
+      throw new Error(result.error || 'Failed to load AI analysis');
+    }
+    
+  } catch (error) {
+    console.error('Error loading AI analysis:', error);
+    showAIError(error.message);
+    showNotification('Failed to load AI analysis. Please try again.', 'error');
+  } finally {
+    isLoadingAIAnalysis = false;
+    hideAILoading();
+  }
+}
+
+// Load specific AI agent analysis
+async function loadSpecificAgentAnalysis(agentName) {
+  try {
+    console.log('🤖 Loading', agentName, 'analysis for:', currentCity);
+    
+    const farmSize = document.getElementById('farmSizeInput')?.value || 1;
+    const response = await fetch(
+      `http://localhost:4001/api/farming/ai-agent/${agentName}/${encodeURIComponent(currentCity)}?crop=${currentCrop}&farmSize=${farmSize}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      updateSpecificAgentDisplay(agentName, result.data.agent_analysis);
+      showNotification(`🤖 ${agentName} analysis completed!`, 'success');
+    } else {
+      throw new Error(result.error || `Failed to load ${agentName} analysis`);
+    }
+    
+  } catch (error) {
+    console.error(`Error loading ${agentName} analysis:`, error);
+    showNotification(`Failed to load ${agentName} analysis.`, 'error');
+  }
+}
+
+// Show AI loading state
+function showAILoading() {
+  const aiContainer = document.getElementById('aiAnalysisContainer');
+  if (aiContainer) {
+    aiContainer.innerHTML = `
+      <div class="ai-loading">
+        <div class="ai-loading-animation">
+          <div class="ai-brain">🧠</div>
+          <div class="ai-dots">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <h3>AI Analysis in Progress</h3>
+        <p>Our AI agents are analyzing weather, crops, market conditions, and resource optimization...</p>
+        <div class="ai-progress-steps">
+          <div class="step active">🌱 Crop Advisory</div>
+          <div class="step active">🌤️ Weather Prediction</div>
+          <div class="step active">💰 Market Intelligence</div>
+          <div class="step active">💧 Resource Optimization</div>
+          <div class="step active">⚠️ Risk Assessment</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// Hide AI loading state
+function hideAILoading() {
+  // Loading will be replaced by actual content
+}
+
+// Show AI error
+function showAIError(errorMessage) {
+  const aiContainer = document.getElementById('aiAnalysisContainer');
+  if (aiContainer) {
+    aiContainer.innerHTML = `
+      <div class="ai-error">
+        <div class="ai-error-icon">🤖❌</div>
+        <h3>AI Analysis Error</h3>
+        <p>${errorMessage}</p>
+        <button onclick="loadAIAnalysis()" class="retry-ai-button">
+          <i class="fas fa-redo"></i> Retry AI Analysis
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Update AI analysis display
+function updateAIAnalysisDisplay(analysisData) {
+  const aiContainer = document.getElementById('aiAnalysisContainer');
+  if (!aiContainer || !analysisData) {
+    console.error('AI container or analysis data not found');
+    return;
+  }
+  
+  if (!analysisData.success) {
+    showAIError(analysisData.error || 'AI analysis failed');
+    return;
+  }
+  
+  const report = analysisData.report;
+  
+  let html = `
+    <div class="ai-analysis-header">
+      <div class="ai-title">
+        <h2>🤖 AI Farming Analysis</h2>
+        <div class="ai-confidence">Confidence: ${Math.round(report.metadata.overallConfidence * 100)}%</div>
+      </div>
+      <div class="ai-meta">
+        <span>Analysis Time: ${analysisData.executionTime}ms</span>
+        <span>Agents: ${report.metadata.successfulAgents}/${report.metadata.successfulAgents + report.metadata.failedAgents}</span>
+      </div>
+    </div>
+  `;
+  
+  // Executive Summary
+  html += `
+    <div class="ai-section executive-summary">
+      <h3>📊 Executive Summary</h3>
+      <div class="summary-card ${report.executiveSummary.overall_assessment}">
+        <div class="summary-assessment">
+          <strong>Overall Assessment: ${report.executiveSummary.overall_assessment.toUpperCase()}</strong>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: ${report.metadata.overallConfidence * 100}%"></div>
+          </div>
+        </div>
+        <div class="key-insights">
+          <h4>Key Insights:</h4>
+          <ul>
+            ${report.executiveSummary.key_insights.map(insight => `<li>${insight}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Priority Actions
+  if (report.priorityActions && report.priorityActions.length > 0) {
+    html += `
+      <div class="ai-section priority-actions">
+        <h3>🚨 Priority Actions</h3>
+        <div class="actions-grid">
+          ${report.priorityActions.map(action => `
+            <div class="action-card ${action.urgency}">
+              <div class="action-header">
+                <span class="action-source">🤖 ${action.source}</span>
+                <span class="action-urgency ${action.urgency}">${action.urgency}</span>
+              </div>
+              <h4>${action.action}</h4>
+              <p>${action.description}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  // Individual Agent Results
+  html += `
+    <div class="ai-section agent-results">
+      <h3>🔬 Detailed Agent Analysis</h3>
+      <div class="agents-grid">
+  `;
+  
+  // Process each agent's results
+  Object.entries(report.agentAnalyses).forEach(([agentName, agentData]) => {
+    if (agentData.status === 'success') {
+      html += createAgentCard(agentName, agentData.data);
+    } else {
+      html += `
+        <div class="agent-card error">
+          <h4>🤖 ${agentName}</h4>
+          <p class="agent-error">Analysis failed: ${agentData.error}</p>
+        </div>
+      `;
+    }
+  });
+  
+  html += `
+      </div>
+    </div>
+  `;
+  
+  // Risk Assessment Summary
+  if (report.riskAssessment) {
+    html += `
+      <div class="ai-section risk-summary">
+        <h3>⚠️ Risk Assessment</h3>
+        <div class="risk-card ${report.riskAssessment.overall_risk_level}">
+          <div class="risk-level">
+            Risk Level: <strong>${report.riskAssessment.overall_risk_level.toUpperCase()}</strong>
+          </div>
+          <div class="risk-stats">
+            <span>Critical Risks: ${report.riskAssessment.critical_risks}</span>
+            <span>Total Risks: ${report.riskAssessment.total_risks_identified}</span>
+          </div>
+          <div class="risk-recommendation">
+            💡 ${report.riskAssessment.recommendation}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  aiContainer.innerHTML = html;
+}
+
+// Create individual agent card
+function createAgentCard(agentName, agentData) {
+  const agentIcons = {
+    cropAdvisor: '🌱',
+    weatherPredictor: '🌤️',
+    marketIntelligence: '💰',
+    resourceOptimizer: '💧',
+    riskAssessment: '⚠️'
+  };
+  
+  const icon = agentIcons[agentName] || '🤖';
+  const confidence = Math.round((agentData.confidence || 0.5) * 100);
+  
+  let content = '';
+  
+  // Process different types of agent data
+  if (agentData.recommendations) {
+    content += '<div class="agent-recommendations">';
+    agentData.recommendations.forEach(rec => {
+      content += `
+        <div class="recommendation-item ${rec.priority || 'medium'}">
+          <h5>${rec.title}</h5>
+          <p>${rec.message}</p>
+          ${rec.details ? `<ul>${rec.details.map(detail => `<li>${detail}</li>`).join('')}</ul>` : ''}
+        </div>
+      `;
+    });
+    content += '</div>';
+  }
+  
+  if (agentData.predictions) {
+    content += '<div class="agent-predictions">';
+    agentData.predictions.forEach(pred => {
+      content += `
+        <div class="prediction-item">
+          <h5>${pred.title}</h5>
+          <p>${pred.message}</p>
+        </div>
+      `;
+    });
+    content += '</div>';
+  }
+  
+  if (agentData.insights) {
+    content += '<div class="agent-insights">';
+    agentData.insights.forEach(insight => {
+      content += `
+        <div class="insight-item">
+          <h5>${insight.title}</h5>
+          <p>${insight.message}</p>
+        </div>
+      `;
+    });
+    content += '</div>';
+  }
+  
+  if (agentData.optimizations) {
+    content += '<div class="agent-optimizations">';
+    agentData.optimizations.forEach(opt => {
+      content += `
+        <div class="optimization-item">
+          <h5>${opt.title}</h5>
+          <p>${opt.message}</p>
+        </div>
+      `;
+    });
+    content += '</div>';
+  }
+  
+  if (agentData.risks) {
+    content += '<div class="agent-risks">';
+    agentData.risks.forEach(risk => {
+      content += `
+        <div class="risk-item ${risk.level || risk.severity}">
+          <h5>${risk.title}</h5>
+          <p>${risk.message}</p>
+        </div>
+      `;
+    });
+    content += '</div>';
+  }
+  
+  return `
+    <div class="agent-card success">
+      <div class="agent-header">
+        <h4>${icon} ${agentName}</h4>
+        <div class="agent-confidence">${confidence}%</div>
+      </div>
+      <div class="agent-content">
+        ${content}
+      </div>
+    </div>
+  `;
+}
+
+// Update specific agent display (for individual agent calls)
+function updateSpecificAgentDisplay(agentName, agentAnalysis) {
+  // This could be used for real-time updates of specific agents
+  console.log(`🤖 Updated ${agentName} analysis:`, agentAnalysis);
+}
+
+// ===== END AI AGENTS FUNCTIONALITY =====
+
 // Load weather data for global locations using coordinates
 async function loadGlobalLocationWeather(location) {
   try {
@@ -1021,6 +1376,10 @@ function updateDashboard(data) {
     }
     
     console.log('🎓 [DEBUG] Dashboard updated successfully');
+    
+    // Auto-load AI analysis for the current location (optional - can be manual)
+    // Uncomment the line below to automatically run AI analysis when dashboard loads
+    // setTimeout(() => loadAIAnalysis(), 2000);
     
   } catch (error) {
     console.error('🎓 [ERROR] Error updating dashboard:', error);

@@ -50,6 +50,93 @@
 
     <!-- Main Content -->
     <main class="alert-section">
+        <!-- Location Search Section -->
+        <section class="location-search-section">
+            <div class="search-container">
+                <h2><i class="fas fa-map-marker-alt"></i> Select Your Location</h2>
+                <div class="search-controls">
+                    <div class="location-search-wrapper">
+                        <div class="search-input-container">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="locationSearch" class="location-search" placeholder="Search small towns, villages, or any location..." autocomplete="off">
+                            <button id="searchBtn" class="search-btn" onclick="searchLocation()">
+                                <i class="fas fa-globe"></i>
+                                <span>Search</span>
+                            </button>
+                        </div>
+                        <div id="searchResults" class="search-results" style="display: none;"></div>
+                    </div>
+                    <div class="current-location-info">
+                        <div class="location-display">
+                            <span class="location-icon">📍</span>
+                            <span class="location-name" id="currentLocationName">Select a location</span>
+                            <span class="location-type" id="currentLocationType"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Current Weather & Environmental Conditions -->
+        <section class="environmental-conditions-section">
+            <h2><i class="fas fa-thermometer-half"></i> Current Environmental Conditions</h2>
+            <div class="environmental-grid">
+                <!-- Temperature Card -->
+                <div class="env-card temperature-card">
+                    <div class="env-card-header">
+                        <div class="env-icon">🌡️</div>
+                        <h3>Temperature</h3>
+                    </div>
+                    <div class="env-value" id="envTemperature">--°C</div>
+                    <div class="env-status" id="envTempStatus">Loading...</div>
+                    <div class="temp-range">
+                        <span>Min: <span id="tempMin">--</span>°C</span>
+                        <span>Max: <span id="tempMax">--</span>°C</span>
+                    </div>
+                </div>
+
+                <!-- Humidity Card -->
+                <div class="env-card humidity-card">
+                    <div class="env-card-header">
+                        <div class="env-icon">💧</div>
+                        <h3>Humidity</h3>
+                    </div>
+                    <div class="env-value" id="envHumidity">--%</div>
+                    <div class="env-status" id="envHumidityStatus">Loading...</div>
+                    <div class="humidity-visual">
+                        <div class="humidity-bar">
+                            <div class="humidity-fill" id="humidityFillBar"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rainfall Card -->
+                <div class="env-card rainfall-card">
+                    <div class="env-card-header">
+                        <div class="env-icon">🌧️</div>
+                        <h3>Rainfall</h3>
+                    </div>
+                    <div class="env-value" id="envRainfall">-- mm</div>
+                    <div class="env-status" id="envRainfallStatus">Loading...</div>
+                    <div class="rainfall-indicator">
+                        <div class="rain-level" id="rainLevelIndicator"></div>
+                    </div>
+                </div>
+
+                <!-- Air Quality Card -->
+                <div class="env-card air-quality-card">
+                    <div class="env-card-header">
+                        <div class="env-icon">🌫️</div>
+                        <h3>Air Quality</h3>
+                    </div>
+                    <div class="env-value" id="envAQI">--</div>
+                    <div class="env-status" id="envAQIStatus">Loading...</div>
+                    <div class="aqi-indicator">
+                        <div class="aqi-level" id="aqiLevelIndicator"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
         <!-- AI Predictions Section -->
         <section class="ml-predictions-section">
             <div class="section-header">
@@ -57,16 +144,12 @@
                 <div class="ml-controls">
                     <div class="select-wrapper">
                         <select id="citySelect" class="city-select">
-                            <option value="">🏙️ Select a city</option>
-                            <option value="Delhi">🏛️ Delhi</option>
-                            <option value="Mumbai">🏢 Mumbai</option>
-                            <option value="Chennai">🏖️ Chennai</option>
-                            <option value="Bangalore">🌳 Bangalore</option>
-                            <option value="Kolkata">🏛️ Kolkata</option>
+                            <option value="">🏡 Select a small town/village</option>
+                            <!-- Small towns will be loaded dynamically -->
                         </select>
                         <i class="fas fa-chevron-down select-arrow"></i>
                     </div>
-                    <button id="generateAlertsBtn" class="predict-btn" onclick="loadAlertPredictions()">
+                    <button id="generateAlertsBtn" class="predict-btn btn-instant-response" onclick="loadAlertPredictions()">
                         <i class="fas fa-magic"></i>
                         <span>Predict Alerts</span>
                         <div class="btn-glow"></div>
@@ -270,15 +353,751 @@
     </main>
 
     <script>
+        // =============== IMMEDIATE LOADING AND PROGRESSIVE ENHANCEMENT ===============
+        
+        // Progressive loading configuration for instant feedback
+        const PROGRESSIVE_CONFIG = {
+            instantFeedback: true,
+            maxLoadTime: 3000,        // 3 seconds max before fallback
+            chunkSize: 5,             // Load 5 cities at a time
+            immediateDisplay: true,   // Show UI immediately
+            backgroundLoading: true   // Continue loading in background
+        };
+        
+        // Immediate UI initialization (runs instantly)
+        function initializeImmediateUI() {
+            console.log('⚡ Instant UI initialization...');
+            
+            // Show immediate loading message
+            updateDashboardStatus('connecting', 'Initializing...');
+            
+            // Pre-populate with sample data immediately
+            showInstantSampleData();
+            
+            // Enable UI interactions immediately
+            enableImmediateInteractions();
+            
+            // Start background data loading
+            setTimeout(loadRealDataProgressively, 100);
+        }
+        
+        // Show instant sample data for immediate feedback
+        function showInstantSampleData() {
+            console.log('🚀 Showing instant sample data...');
+            
+            // Populate dropdown with sample locations immediately
+            const citySelect = document.getElementById('citySelect');
+            citySelect.innerHTML = `
+                <option value="">🏡 Select a small town/village</option>
+                <option value="sample_mandla">🏡 Mandla (Sample - Loading real data...)</option>
+                <option value="sample_dharamshala">⛰️ Dharamshala (Sample - Loading real data...)</option>
+                <option value="sample_raichur">🏡 Raichur (Sample - Loading real data...)</option>
+            `;
+            
+            // Show sample environmental data immediately
+            const sampleData = {
+                temperature: 28,
+                temp_min: 22,
+                temp_max: 34,
+                humidity: 65,
+                rainfall: 2.5,
+                air_quality_index: 95
+            };
+            
+            updateEnvironmentalDisplay(sampleData, true); // Mark as sample data
+            
+            // Update status
+            document.getElementById('currentLocationName').textContent = 'Sample Location';
+            document.getElementById('currentLocationType').textContent = 'Loading real data...';
+            
+            updateDashboardStatus('connecting', 'Sample data loaded');
+        }
+        
+        // Enable immediate UI interactions
+        function enableImmediateInteractions() {
+            console.log('🔄 Enabling immediate interactions...');
+            
+            // Add loading overlay functionality
+            addLoadingOverlay();
+            
+            // Add instant search functionality
+            const searchInput = document.getElementById('locationSearch');
+            if (searchInput) {
+                searchInput.placeholder = 'Search (loading locations...)';
+                searchInput.disabled = false;
+            }
+            
+            // Add immediate feedback to buttons
+            const generateBtn = document.getElementById('generateAlertsBtn');
+            if (generateBtn) {
+                generateBtn.onclick = function() {
+                    showLoadingAlert('Loading alert predictions...');
+                    setTimeout(loadAlertPredictions, 100);
+                };
+            }
+        }
+        
+        // Add loading overlay for better UX
+        function addLoadingOverlay() {
+            const overlay = document.createElement('div');
+            overlay.id = 'dashboardLoadingOverlay';
+            overlay.className = 'dashboard-loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-content">
+                    <div class="loading-spinner">
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-ring"></div>
+                        <div class="spinner-ring"></div>
+                    </div>
+                    <h3>Climate-Sync Loading...</h3>
+                    <p id="loadingMessage">Initializing dashboard...</p>
+                    <div class="loading-progress">
+                        <div class="progress-bar" id="loadingProgress"></div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Auto-hide after showing sample data
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 500);
+            }, 1500);
+        }
+        
+        // Progressive data loading (loads real data in chunks)
+        async function loadRealDataProgressively() {
+            console.log('🔄 Starting progressive data loading...');
+            
+            try {
+                updateLoadingProgress(20, 'Loading small towns...');
+                
+                // Load cities with immediate timeout
+                const citiesPromise = Promise.race([
+                    loadSmallTownsOptimized(),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), PROGRESSIVE_CONFIG.maxLoadTime)
+                    )
+                ]);
+                
+                await citiesPromise;
+                updateLoadingProgress(60, 'Towns loaded successfully');
+                
+                // Auto-select first real city
+                setTimeout(() => {
+                    if (availableCities.length > 0) {
+                        selectRealCity(availableCities[0]);
+                        updateLoadingProgress(100, 'Dashboard ready');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.warn('⚠️ Progressive loading failed, using sample data:', error.message);
+                updateLoadingProgress(100, 'Using sample data');
+                showPermanentSampleMode();
+            }
+        }
+        
+        // Optimized small towns loading
+        async function loadSmallTownsOptimized() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+            
+            try {
+                const response = await fetch('http://localhost:4001/api/weather/cities', {
+                    signal: controller.signal,
+                    headers: {
+                        'Cache-Control': 'max-age=300' // 5 minute cache
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    availableCities = data.data;
+                    populateCityDropdownOptimized(availableCities);
+                    updateDashboardStatus('connected', 'Real data loaded');
+                    console.log('✅ Optimized loading: ' + availableCities.length + ' cities');
+                    return true;
+                } else {
+                    throw new Error('No city data');
+                }
+                
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
+            }
+        }
+        
+        // Optimized dropdown population
+        function populateCityDropdownOptimized(cities) {
+            const citySelect = document.getElementById('citySelect');
+            const fragment = document.createDocumentFragment();
+            
+            // Clear sample data
+            citySelect.innerHTML = '<option value="">🏡 Select a small town/village</option>';
+            
+            // Add cities in chunks to avoid blocking
+            const chunks = [];
+            for (let i = 0; i < cities.length; i += PROGRESSIVE_CONFIG.chunkSize) {
+                chunks.push(cities.slice(i, i + PROGRESSIVE_CONFIG.chunkSize));
+            }
+            
+            chunks.forEach((chunk, index) => {
+                setTimeout(() => {
+                    chunk.forEach(city => {
+                        const option = document.createElement('option');
+                        const typeIcon = getLocationTypeIcon(city.type);
+                        option.value = city.name;
+                        option.textContent = `${typeIcon} ${city.name} (${city.state})`;
+                        option.dataset.cityData = JSON.stringify(city);
+                        fragment.appendChild(option);
+                    });
+                    
+                    if (index === 0) {
+                        citySelect.appendChild(fragment);
+                    }
+                }, index * 50); // Stagger loading
+            });
+        }
+        
+        // Select real city data
+        function selectRealCity(city) {
+            const citySelect = document.getElementById('citySelect');
+            citySelect.value = city.name;
+            
+            document.getElementById('currentLocationName').textContent = city.name;
+            document.getElementById('currentLocationType').textContent = `${city.type}, ${city.state}`;
+            
+            // Load real environmental data with fallback
+            loadEnvironmentalDataOptimized(city.name);
+        }
+        
+        // Optimized environmental data loading
+        async function loadEnvironmentalDataOptimized(cityName) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            
+            try {
+                updateDashboardStatus('connecting', `Loading ${cityName}...`);
+                
+                const response = await fetch(`http://localhost:4001/api/weather/current/${cityName}`, {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        updateEnvironmentalDisplay(data.data);
+                        updateDashboardStatus('connected', 'Real data updated');
+                        return;
+                    }
+                }
+                
+                throw new Error('No weather data');
+                
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.warn(`⚠️ Weather data failed for ${cityName}, keeping sample data`);
+                updateDashboardStatus('disconnected', 'Using sample data');
+            }
+        }
+        
+        // Show permanent sample mode
+        function showPermanentSampleMode() {
+            const warningDiv = document.createElement('div');
+            warningDiv.className = 'sample-mode-notice';
+            warningDiv.innerHTML = `
+                <div class="notice-content">
+                    <i class="fas fa-flask"></i>
+                    <span>Running in sample data mode - Real data unavailable</span>
+                    <button onclick="retryRealData()" class="retry-btn">
+                        <i class="fas fa-sync-alt"></i> Retry
+                    </button>
+                </div>
+            `;
+            
+            const alertSection = document.querySelector('.alert-section');
+            if (alertSection) {
+                alertSection.insertBefore(warningDiv, alertSection.firstChild);
+            }
+        }
+        
+        // Update loading progress
+        function updateLoadingProgress(percent, message) {
+            const progressBar = document.getElementById('loadingProgress');
+            const loadingMessage = document.getElementById('loadingMessage');
+            
+            if (progressBar) {
+                progressBar.style.width = percent + '%';
+            }
+            
+            if (loadingMessage) {
+                loadingMessage.textContent = message;
+            }
+        }
+        
+        // Show loading alert
+        function showLoadingAlert(message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'loading-alert';
+            alertDiv.innerHTML = `
+                <div class="alert-content">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 2000);
+        }
+        
+        // Retry real data loading
+        function retryRealData() {
+            console.log('🔄 Retrying real data loading...');
+            
+            const notice = document.querySelector('.sample-mode-notice');
+            if (notice) notice.remove();
+            
+            const warning = document.getElementById('connectionWarning');
+            if (warning) warning.remove();
+            
+            loadRealDataProgressively();
+        }
+        
+        // Update dashboard status indicator
+        function updateDashboardStatus(status, message) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            const forceUpdateBtn = document.getElementById('forceUpdateBtn');
+            
+            if (statusDot && statusText) {
+                statusDot.className = `status-dot ${status}`;
+                statusText.textContent = message;
+                
+                // Show force update button if disconnected
+                if (forceUpdateBtn) {
+                    if (status === 'disconnected' || status === 'connecting') {
+                        forceUpdateBtn.classList.add('show');
+                    } else {
+                        forceUpdateBtn.classList.remove('show');
+                    }
+                }
+            }
+        }
+        
+        // Enhanced load small towns with status updates
+        async function loadSmallTowns() {
+            try {
+                updateDashboardStatus('connecting', 'Loading...');
+                showLoadingState('Loading locations...');
+                
+                const response = await retryWithBackoff(async () => {
+                    return await fetchWithTimeout('http://localhost:4001/api/weather/cities', {}, DASHBOARD_CONFIG.timeouts.dataLoad);
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    availableCities = data.data;
+                    populateCityDropdown(availableCities);
+                    updateDashboardStatus('connected', 'Connected');
+                    console.log('✅ Loaded small towns:', availableCities.length);
+                    
+                    // Auto-select first city for demo
+                    if (availableCities.length > 0) {
+                        setTimeout(() => {
+                            selectFirstCity();
+                        }, 1000);
+                    }
+                } else {
+                    throw new Error(data.error || 'No city data received');
+                }
+                
+            } catch (error) {
+                console.error('❌ Failed to load cities:', error.message);
+                updateDashboardStatus('disconnected', 'Connection Failed');
+                
+                // Use fallback cities data
+                availableCities = getFallbackCities();
+                populateCityDropdown(availableCities);
+                
+                showFallbackData();
+                console.warn('Using fallback cities data');
+            }
+        }
+        
+        // Get fallback cities data
+        function getFallbackCities() {
+            return [
+                { id: 1, name: 'Mandla', state: 'Madhya Pradesh', type: 'Town', economic_activity: 'Agriculture, Tribal crafts' },
+                { id: 2, name: 'Dharamshala', state: 'Himachal Pradesh', type: 'Hill Station', economic_activity: 'Tourism, Tea cultivation' },
+                { id: 3, name: 'Raichur', state: 'Karnataka', type: 'Town', economic_activity: 'Cotton farming, Mining' },
+                { id: 4, name: 'Darjeeling', state: 'West Bengal', type: 'Hill Station', economic_activity: 'Tea cultivation, Tourism' },
+                { id: 5, name: 'Jaisalmer', state: 'Rajasthan', type: 'Desert Town', economic_activity: 'Tourism, Traditional crafts' }
+            ];
+        }
+        
+        // Auto-select first city
+        function selectFirstCity() {
+            if (availableCities.length > 0) {
+                const firstCity = availableCities[0];
+                const citySelect = document.getElementById('citySelect');
+                citySelect.value = firstCity.name;
+                
+                document.getElementById('currentLocationName').textContent = firstCity.name;
+                document.getElementById('currentLocationType').textContent = `${firstCity.type}, ${firstCity.state}`;
+                
+                loadEnvironmentalData(firstCity.name);
+            }
+        }
+        
+        // Enhanced load environmental data with timeout and fallback
+        async function loadEnvironmentalData(cityName) {
+            if (!cityName) return;
+            
+            try {
+                showLoadingState(`Loading ${cityName} data...`);
+                
+                const response = await retryWithBackoff(async () => {
+                    return await fetchWithTimeout(
+                        `http://localhost:4001/api/weather/current/${cityName}`,
+                        {},
+                        DASHBOARD_CONFIG.timeouts.dataLoad
+                    );
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    updateEnvironmentalDisplay(data.data);
+                    currentLocationData = data.data;
+                    dashboardState.lastSuccessfulLoad = Date.now();
+                    console.log(`✅ Environmental data loaded for ${cityName}`);
+                } else {
+                    throw new Error(data.error || 'No weather data received');
+                }
+                
+            } catch (error) {
+                console.error(`❌ Failed to load environmental data for ${cityName}:`, error.message);
+                showFallbackData();
+            } finally {
+                dashboardState.isLoading = false;
+            }
+        }
+        
+        // Populate city dropdown with small towns data
+        function populateCityDropdown(cities) {
+            const citySelect = document.getElementById('citySelect');
+            citySelect.innerHTML = '<option value="">🏡 Select a small town/village</option>';
+            
+            cities.forEach(city => {
+                const typeIcon = getLocationTypeIcon(city.type);
+                const option = document.createElement('option');
+                option.value = city.name;
+                option.textContent = `${typeIcon} ${city.name} (${city.state})`;
+                option.dataset.cityData = JSON.stringify(city);
+                citySelect.appendChild(option);
+            });
+        }
+        
+        // Get icon based on location type
+        function getLocationTypeIcon(type) {
+            const icons = {
+                'Town': '🏘️',
+                'Hill Station': '⛰️',
+                'Hill Town': '🏔️',
+                'Desert Town': '🏜️',
+                'Coastal Town': '🏖️',
+                'Tribal Town': '🌿',
+                'Border Town': '🔆',
+                'Mountain Town': '🗻',
+                'High Altitude Town': '🏔️'
+            };
+            return icons[type] || '🏘️';
+        }
+        
+        // Search location functionality
+        async function searchLocation() {
+            const searchInput = document.getElementById('locationSearch');
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                alert('Please enter a location to search');
+                return;
+            }
+            
+            const searchResults = document.getElementById('searchResults');
+            searchResults.innerHTML = '<div class="search-loading">🔍 Searching...</div>';
+            searchResults.style.display = 'block';
+            
+            try {
+                // Search in loaded cities first
+                const localResults = availableCities.filter(city => 
+                    city.name.toLowerCase().includes(query.toLowerCase()) ||
+                    city.state.toLowerCase().includes(query.toLowerCase()) ||
+                    city.district.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                displaySearchResults(localResults);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                searchResults.innerHTML = '<div class="search-error">❌ Search failed</div>';
+            }
+        }
+        
+        // Display search results
+        function displaySearchResults(results) {
+            const searchResults = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="search-no-results">❌ No locations found</div>';
+                return;
+            }
+            
+            let html = '';
+            results.forEach(city => {
+                const typeIcon = getLocationTypeIcon(city.type);
+                html += `
+                    <div class="search-result-item" onclick="selectSearchResult('${city.name}', '${city.type}', '${city.state}')">
+                        <div class="result-icon">${typeIcon}</div>
+                        <div class="result-info">
+                            <div class="result-name">${city.name}</div>
+                            <div class="result-details">${city.state} • ${city.type}</div>
+                            <div class="result-activity">${city.economic_activity}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            searchResults.innerHTML = html;
+        }
+        
+        // Select search result
+        function selectSearchResult(cityName, cityType, stateName) {
+            document.getElementById('locationSearch').value = cityName;
+            document.getElementById('citySelect').value = cityName;
+            document.getElementById('searchResults').style.display = 'none';
+            
+            // Update current location display
+            document.getElementById('currentLocationName').textContent = cityName;
+            document.getElementById('currentLocationType').textContent = `${cityType}, ${stateName}`;
+            
+            // Load environmental data for selected location
+            loadEnvironmentalData(cityName);
+        }
+        
+        // Enhanced load environmental data with timeout and fallback
+        async function loadEnvironmentalData(cityName) {
+            if (!cityName) return;
+            
+            try {
+                showLoadingState(`Loading ${cityName} data...`);
+                
+                const response = await retryWithBackoff(async () => {
+                    return await fetchWithTimeout(
+                        `http://localhost:4001/api/weather/current/${cityName}`,
+                        {},
+                        DASHBOARD_CONFIG.timeouts.dataLoad
+                    );
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    updateEnvironmentalDisplay(data.data);
+                    currentLocationData = data.data;
+                    dashboardState.lastSuccessfulLoad = Date.now();
+                    console.log(`✅ Environmental data loaded for ${cityName}`);
+                } else {
+                    throw new Error(data.error || 'No weather data received');
+                }
+                
+            } catch (error) {
+                console.error(`❌ Failed to load environmental data for ${cityName}:`, error.message);
+                showFallbackData();
+            } finally {
+                dashboardState.isLoading = false;
+            }
+        }
+        
+        // Update environmental conditions display with instant feedback
+        function updateEnvironmentalDisplay(weatherData, isSampleData = false) {
+            const statusClass = isSampleData ? 'sample-data' : 'real-data';
+            
+            // Add instant animation
+            const cards = document.querySelectorAll('.env-card');
+            cards.forEach(card => card.classList.add('instant-load'));
+            
+            // Temperature
+            if (weatherData.temperature !== undefined) {
+                document.getElementById('envTemperature').textContent = `${weatherData.temperature.toFixed(1)}°C`;
+                document.getElementById('tempMin').textContent = weatherData.temp_min?.toFixed(1) || '--';
+                document.getElementById('tempMax').textContent = weatherData.temp_max?.toFixed(1) || '--';
+                
+                const tempStatus = getTemperatureStatus(weatherData.temperature);
+                const tempStatusEl = document.getElementById('envTempStatus');
+                tempStatusEl.textContent = tempStatus.text;
+                tempStatusEl.className = `env-status ${tempStatus.class} ${statusClass}`;
+            }
+            
+            // Humidity
+            if (weatherData.humidity !== undefined) {
+                document.getElementById('envHumidity').textContent = `${weatherData.humidity}%`;
+                const humidityFill = document.getElementById('humidityFillBar');
+                if (humidityFill) {
+                    // Animate the fill
+                    setTimeout(() => {
+                        humidityFill.style.width = `${weatherData.humidity}%`;
+                    }, 200);
+                }
+                
+                const humidityStatus = getHumidityStatus(weatherData.humidity);
+                const humidityStatusEl = document.getElementById('envHumidityStatus');
+                humidityStatusEl.textContent = humidityStatus.text;
+                humidityStatusEl.className = `env-status ${humidityStatus.class} ${statusClass}`;
+            }
+            
+            // Rainfall
+            if (weatherData.rainfall !== undefined) {
+                document.getElementById('envRainfall').textContent = `${weatherData.rainfall.toFixed(1)} mm`;
+                const rainLevel = document.getElementById('rainLevelIndicator');
+                if (rainLevel) {
+                    const level = Math.min(weatherData.rainfall / 50 * 100, 100);
+                    // Animate the level
+                    setTimeout(() => {
+                        rainLevel.style.height = `${level}%`;
+                    }, 400);
+                }
+                
+                const rainfallStatus = getRainfallStatus(weatherData.rainfall);
+                const rainfallStatusEl = document.getElementById('envRainfallStatus');
+                rainfallStatusEl.textContent = rainfallStatus.text;
+                rainfallStatusEl.className = `env-status ${rainfallStatus.class} ${statusClass}`;
+            }
+            
+            // Air Quality
+            if (weatherData.air_quality_index !== undefined) {
+                document.getElementById('envAQI').textContent = weatherData.air_quality_index;
+                const aqiLevel = document.getElementById('aqiLevelIndicator');
+                if (aqiLevel) {
+                    const level = Math.min(weatherData.air_quality_index / 500 * 100, 100);
+                    // Animate the level
+                    setTimeout(() => {
+                        aqiLevel.style.width = `${level}%`;
+                    }, 600);
+                }
+                
+                const aqiStatus = getAQIStatus(weatherData.air_quality_index);
+                const aqiStatusEl = document.getElementById('envAQIStatus');
+                aqiStatusEl.textContent = aqiStatus.text;
+                aqiStatusEl.className = `env-status ${aqiStatus.class} ${statusClass}`;
+            }
+            
+            // Remove animation classes after animation completes
+            setTimeout(() => {
+                cards.forEach(card => card.classList.remove('instant-load'));
+            }, 500);
+        }
+        
+        // Status helper functions
+        function getTemperatureStatus(temp) {
+            if (temp < 10) return { text: 'Very Cold', class: 'cold' };
+            if (temp < 20) return { text: 'Cool', class: 'cool' };
+            if (temp < 30) return { text: 'Comfortable', class: 'comfortable' };
+            if (temp < 35) return { text: 'Warm', class: 'warm' };
+            if (temp < 40) return { text: 'Hot', class: 'hot' };
+            return { text: 'Extreme Heat', class: 'extreme' };
+        }
+        
+        function getHumidityStatus(humidity) {
+            if (humidity < 30) return { text: 'Dry', class: 'dry' };
+            if (humidity < 60) return { text: 'Comfortable', class: 'comfortable' };
+            if (humidity < 80) return { text: 'Humid', class: 'humid' };
+            return { text: 'Very Humid', class: 'very-humid' };
+        }
+        
+        function getRainfallStatus(rainfall) {
+            if (rainfall === 0) return { text: 'No Rain', class: 'no-rain' };
+            if (rainfall < 2) return { text: 'Light Rain', class: 'light' };
+            if (rainfall < 10) return { text: 'Moderate Rain', class: 'moderate' };
+            if (rainfall < 30) return { text: 'Heavy Rain', class: 'heavy' };
+            return { text: 'Extreme Rain', class: 'extreme' };
+        }
+        
+        function getAQIStatus(aqi) {
+            if (aqi <= 50) return { text: 'Good', class: 'good' };
+            if (aqi <= 100) return { text: 'Moderate', class: 'moderate' };
+            if (aqi <= 150) return { text: 'Unhealthy for Sensitive', class: 'unhealthy-sensitive' };
+            if (aqi <= 200) return { text: 'Unhealthy', class: 'unhealthy' };
+            if (aqi <= 300) return { text: 'Very Unhealthy', class: 'very-unhealthy' };
+            return { text: 'Hazardous', class: 'hazardous' };
+        }
+        
+        // Initialize dashboard with IMMEDIATE loading
+        function initializeDashboard() {
+            console.log('⚡ Instant Dashboard Initialization Started...');
+            
+            // IMMEDIATE: Show UI and sample data instantly
+            initializeImmediateUI();
+            
+            // PROGRESSIVE: Load real data in background
+            // No blocking operations here
+        }
+        
+        // Initialize when page loads - INSTANT RESPONSE
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('⚡ DOM Ready - Starting INSTANT Dashboard...');
+            
+            // Start immediate initialization (no delays)
+            initializeDashboard();
+            
+            // Add event listeners
+            document.getElementById('locationSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchLocation();
+                }
+            });
+            
+            document.getElementById('citySelect').addEventListener('change', function(e) {
+                if (e.target.value) {
+                    const cityData = JSON.parse(e.target.selectedOptions[0].dataset.cityData || '{}');
+                    document.getElementById('currentLocationName').textContent = cityData.name || e.target.value;
+                    document.getElementById('currentLocationType').textContent = `${cityData.type || 'Town'}, ${cityData.state || ''}`;
+                    loadEnvironmentalData(e.target.value);
+                }
+            });
+            
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(e) {
+                const searchContainer = document.querySelector('.location-search-wrapper');
+                if (!searchContainer.contains(e.target)) {
+                    document.getElementById('searchResults').style.display = 'none';
+                }
+            });
+        });
+
         // =============== ML ALERT PREDICTIONS ===============
         
-        // Load ML alert predictions for selected city
+        // Load ML alert predictions for selected city (updated to work with small towns)
         async function loadAlertPredictions() {
             const citySelect = document.getElementById('citySelect');
             const city = citySelect.value;
             
             if (!city) {
-                alert('Please select a city');
+                alert('Please select a location first');
                 return;
             }
 
@@ -287,7 +1106,7 @@
             
             // Show loading state
             predictionsSection.style.display = 'grid';
-            predictionsSection.innerHTML = '<div class="ml-loading"><i class="fas fa-spinner fa-spin"></i><p>Analyzing environmental risks...</p></div>';
+            predictionsSection.innerHTML = '<div class="ml-loading"><i class="fas fa-spinner fa-spin"></i><p>Analyzing environmental risks for ' + city + '...</p></div>';
             
             // Disable button
             generateBtn.disabled = true;
@@ -304,7 +1123,7 @@
                 }
             } catch (error) {
                 console.error('Error loading alert predictions:', error);
-                predictionsSection.innerHTML = `<div class="ml-error">Error loading alert predictions: ${error.message}</div>`;
+                predictionsSection.innerHTML = `<div class="ml-error">Error loading alert predictions for ${city}: ${error.message}</div>`;
             } finally {
                 // Re-enable button
                 generateBtn.disabled = false;
@@ -419,4 +1238,16 @@
         }
     </script>
 </body>
+
+<!-- Dashboard Status Indicator -->
+<div class="dashboard-status" id="dashboardStatus">
+    <div class="status-dot connected" id="statusDot"></div>
+    <span id="statusText">Connected</span>
+</div>
+
+<!-- Force Update Button -->
+<button class="force-update-btn" id="forceUpdateBtn" onclick="forceRefreshDashboard()" title="Force Refresh Dashboard">
+    <i class="fas fa-sync-alt"></i>
+</button>
+
 </html>

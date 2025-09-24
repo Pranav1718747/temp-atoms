@@ -35,31 +35,198 @@ class WeatherPredictor {
      * Predict weather for the next N days
      * @param {Array} historicalData - Array of weather data points
      * @param {number} days - Number of days to predict
+     * @param {Object} currentWeather - Current weather data (can include Open-Meteo forecasts)
      * @returns {Object} Weather predictions
      */
-    async predictWeather(historicalData, days = 7) {
+    async predictWeather(historicalData, days = 7, currentWeather = null) {
         if (!this.isInitialized) {
             throw new Error('Weather predictor not initialized');
         }
 
         try {
-            const predictions = await Promise.all([
-                this.models.temperature.predict(historicalData, days),
-                this.models.rainfall.predict(historicalData, days),
-                this.models.humidity.predict(historicalData, days)
-            ]);
+            // If we have Open-Meteo forecast data, use it to enhance predictions
+            let enhancedPredictions;
+            if (currentWeather?.daily_forecast && currentWeather?.hourly_forecast) {
+                console.log('Using Open-Meteo forecast data to enhance predictions');
+                enhancedPredictions = this.integrateOpenMeteoForecasts(
+                    currentWeather, historicalData, days
+                );
+            } else {
+                // Use traditional ML prediction methods
+                const predictions = await Promise.all([
+                    this.models.temperature.predict(historicalData, days),
+                    this.models.rainfall.predict(historicalData, days),
+                    this.models.humidity.predict(historicalData, days)
+                ]);
+
+                enhancedPredictions = {
+                    temperature: predictions[0],
+                    rainfall: predictions[1],
+                    humidity: predictions[2],
+                    confidence: this.calculateOverallConfidence(predictions)
+                };
+            }
 
             return {
-                temperature: predictions[0],
-                rainfall: predictions[1],
-                humidity: predictions[2],
-                confidence: this.calculateOverallConfidence(predictions),
-                generatedAt: new Date().toISOString()
+                ...enhancedPredictions,
+                generatedAt: new Date().toISOString(),
+                dataSource: currentWeather?.daily_forecast ? 'Open-Meteo + ML' : 'ML Only'
             };
         } catch (error) {
             console.error('Error in weather prediction:', error);
             throw error;
         }
+    }
+
+    /**
+     * Integrate Open-Meteo forecasts with ML predictions
+     */
+    integrateOpenMeteoForecasts(currentWeather, historicalData, days) {
+        const dailyForecast = currentWeather.daily_forecast || [];
+        const hourlyForecast = currentWeather.hourly_forecast || [];
+        
+        const temperaturePredictions = [];
+        const rainfallPredictions = [];
+        const humidityPredictions = [];
+        
+        for (let day = 1; day <= days; day++) {
+            const forecastIndex = day - 1;
+            
+            if (forecastIndex < dailyForecast.length) {
+                // Use Open-Meteo data
+                const forecast = dailyForecast[forecastIndex];
+                
+                temperaturePredictions.push({
+                    day: day,
+                    temperature: (forecast.temp_min + forecast.temp_max) / 2,
+                    temp_min: forecast.temp_min,
+                    temp_max: forecast.temp_max,
+                    confidence: 0.95, // Open-Meteo has high accuracy
+                    date: forecast.date,
+                    source: 'Open-Meteo'
+                });
+                
+                rainfallPredictions.push({
+                    day: day,
+                    rainfall: forecast.precipitation,
+                    probability: forecast.precipitation > 0 ? 0.8 : 0.2,
+                    category: this.categorizePrecipitation(forecast.precipitation),
+                    confidence: 0.9,
+                    date: forecast.date,
+                    source: 'Open-Meteo'
+                });
+                
+                // Estimate humidity from hourly data or use model
+                const avgHumidity = this.estimateHumidityFromForecast(
+                    hourlyForecast, forecastIndex * 24, 24
+                );
+                
+                humidityPredictions.push({
+                    day: day,
+                    humidity: avgHumidity,
+                    confidence: 0.85,
+                    date: forecast.date,
+                    source: avgHumidity > 0 ? 'Open-Meteo' : 'ML Estimate'
+                });
+                
+            } else {
+                // Use ML predictions for days beyond Open-Meteo forecast
+                const tempPred = this.models.temperature.predict(historicalData, 1);
+                const rainPred = this.models.rainfall.predict(historicalData, 1);
+                const humPred = this.models.humidity.predict(historicalData, 1);
+                
+                temperaturePredictions.push({
+                    day: day,
+                    temperature: tempPred.predictions[0]?.temperature || 25,
+                    confidence: 0.7,
+                    date: this.getDateOffset(day),
+                    source: 'ML Prediction'
+                });
+                
+                rainfallPredictions.push({
+                    day: day,
+                    rainfall: rainPred.predictions[0]?.rainfall || 0,
+                    confidence: 0.6,
+                    date: this.getDateOffset(day),
+                    source: 'ML Prediction'
+                });
+                
+                humidityPredictions.push({
+                    day: day,
+                    humidity: humPred.predictions[0]?.humidity || 60,
+                    confidence: 0.65,
+                    date: this.getDateOffset(day),
+                    source: 'ML Prediction'
+                });
+            }
+        }
+        
+        return {
+            temperature: {
+                predictions: temperaturePredictions,
+                confidence: this.calculateAverageConfidence(temperaturePredictions),
+                modelType: 'Open-Meteo + ML Hybrid'
+            },
+            rainfall: {
+                predictions: rainfallPredictions,
+                confidence: this.calculateAverageConfidence(rainfallPredictions),
+                modelType: 'Open-Meteo + ML Hybrid'
+            },
+            humidity: {
+                predictions: humidityPredictions,
+                confidence: this.calculateAverageConfidence(humidityPredictions),
+                modelType: 'Open-Meteo + ML Hybrid'
+            }
+        };
+    }
+    
+    /**
+     * Categorize precipitation amount
+     */
+    categorizePrecipitation(amount) {
+        if (amount < 1) return 'none';
+        if (amount < 5) return 'light';
+        if (amount < 15) return 'moderate';
+        if (amount < 30) return 'heavy';
+        return 'very heavy';
+    }
+    
+    /**
+     * Estimate humidity from hourly forecast data
+     */
+    estimateHumidityFromForecast(hourlyData, startIndex, hours) {
+        if (!hourlyData || hourlyData.length === 0) return 0;
+        
+        let totalHumidity = 0;
+        let count = 0;
+        
+        for (let i = startIndex; i < Math.min(startIndex + hours, hourlyData.length); i++) {
+            if (hourlyData[i] && hourlyData[i].humidity != null) {
+                totalHumidity += hourlyData[i].humidity;
+                count++;
+            }
+        }
+        
+        return count > 0 ? Math.round(totalHumidity / count) : 0;
+    }
+    
+    /**
+     * Calculate average confidence from predictions
+     */
+    calculateAverageConfidence(predictions) {
+        if (!predictions || predictions.length === 0) return 0;
+        
+        const totalConfidence = predictions.reduce((sum, pred) => sum + (pred.confidence || 0), 0);
+        return totalConfidence / predictions.length;
+    }
+    
+    /**
+     * Get date offset
+     */
+    getDateOffset(days) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        return date.toISOString().split('T')[0];
     }
 
     /**

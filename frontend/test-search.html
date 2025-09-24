@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .search-input { width: 300px; padding: 10px; margin: 10px 0; }
+        .results { border: 1px solid #ccc; max-height: 200px; overflow-y: auto; }
+        .result-item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .result-item:hover { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Location Search Test</h1>
+    <input type="text" id="searchInput" class="search-input" placeholder="Type location name...">
+    <div id="results" class="results"></div>
+
+    <script>
+        let searchTimeout;
+        
+        document.getElementById('searchInput').addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            
+            if (searchTimeout) clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                document.getElementById('results').innerHTML = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    console.log('Searching for:', query);
+                    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+                    const result = await response.json();
+                    console.log('API Result:', result);
+                    
+                    const resultsDiv = document.getElementById('results');
+                    
+                    if (result.success && result.results && result.results.length > 0) {
+                        let html = '';
+                        result.results.forEach(location => {
+                            html += `
+                                <div class="result-item" onclick="selectLocation('${location.name}', ${location.latitude}, ${location.longitude})">
+                                    <strong>${location.name}</strong> - ${location.country}
+                                    <br><small>${location.admin1 || ''} ${location.admin2 || ''}</small>
+                                    <br><small>📍 ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}</small>
+                                </div>
+                            `;
+                        });
+                        resultsDiv.innerHTML = html;
+                    } else {
+                        resultsDiv.innerHTML = '<div class="result-item">No results found</div>';
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                    document.getElementById('results').innerHTML = '<div class="result-item">Error searching</div>';
+                }
+            }, 500);
+        });
+        
+        function selectLocation(name, lat, lon) {
+            console.log(`Testing weather fetch for: ${name} at ${lat}, ${lon}`);
+            
+            // Test the actual weather API
+            fetch(`http://localhost:4001/api/weather/coordinates/${lat}/${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Weather data:', data);
+                    if (data.success && data.weather && data.weather.current) {
+                        const temp = data.weather.current.temperature;
+                        const humidity = data.weather.current.humidity;
+                        const desc = data.weather.current.weather_description;
+                        alert(`${name}: ${temp}°C, ${humidity}% humidity, ${desc}`);
+                    } else {
+                        alert(`Error loading weather for ${name}: ${data.error || 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Network error loading weather for ${name}`);
+                });
+        }
+    </script>
+</body>
+</html>

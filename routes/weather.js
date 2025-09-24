@@ -1,5 +1,6 @@
 // routes/weather.js
 const express = require('express');
+const axios = require('axios');
 const router = express.Router();
 const ClimateDB = require('../database/db');
 
@@ -46,30 +47,47 @@ router.get('/current/:city', async (req, res) => {
     console.log('Weather data received:', {
       city: weather.city,
       hasOpenWeather: !!weather.openWeatherData,
-      hasIMD: !!weather.imdData
+      hasIMD: !!weather.imdData,
+      hasOpenMeteo: !!weather.openMeteoData
     });
 
-    // Always save data if we have OpenWeather data (real or mock)
-    if (weather?.openWeatherData?.data) {
+    // Prioritize data sources: Open-Meteo (free, reliable) > OpenWeather > Mock
+    let primaryWeatherData;
+    let dataSource;
+    
+    if (weather?.openMeteoData?.data) {
+      primaryWeatherData = weather.openMeteoData.data;
+      dataSource = weather.openMeteoData.source;
+    } else if (weather?.openWeatherData?.data) {
+      primaryWeatherData = weather.openWeatherData.data;
+      dataSource = weather.openWeatherData.source;
+    } else {
+      console.log(`No weather data available for ${city}`);
+      return res.status(503).json({ 
+        success: false, 
+        error: 'Weather data temporarily unavailable' 
+      });
+    }
+
+    // Save data to database
+    if (primaryWeatherData) {
       const dataToSave = {
         city_id: cityInfo.id,
         city_name: city,
-        temperature: weather.openWeatherData.data.main.temp ?? 0,
-        humidity: weather.openWeatherData.data.main.humidity ?? 0,
-        rainfall: weather.openWeatherData.data.rain?.['1h'] ?? 0,
-        weather_description: weather.openWeatherData.data.weather?.[0]?.description ?? 'Unknown',
-        data_source: weather.openWeatherData.source || 'OpenWeather',
+        temperature: primaryWeatherData.main.temp ?? 0,
+        humidity: primaryWeatherData.main.humidity ?? 0,
+        rainfall: primaryWeatherData.rain?.['1h'] ?? 0,
+        weather_description: primaryWeatherData.weather?.[0]?.description ?? 'Unknown',
+        data_source: dataSource || 'Unknown',
       };
 
       try {
         climateDB.insertWeatherData(dataToSave);
-        console.log(`Weather data saved for ${city}`);
+        console.log(`Weather data saved for ${city} from ${dataSource}`);
       } catch (dbError) {
         console.error('Database save error:', dbError.message);
         // Continue anyway - don't fail the request
       }
-    } else {
-      console.log(`No weather data available for ${city}`);
     }
 
     // Include city metadata in response
@@ -97,11 +115,13 @@ router.get('/debug/:city', async (req, res) => {
     console.log('OpenWeather API Key configured:', !!process.env.OPENWEATHER_API_KEY);
     console.log('OpenWeather API Key value:', process.env.OPENWEATHER_API_KEY?.substring(0, 8) + '...');
     
-    // Test OpenWeather individually
+    // Test all APIs individually
+    console.log('\n--- Testing Open-Meteo API (Free) ---');
+    const openMeteoResult = await climateAPI.getOpenMeteoWeather(city);
+    
     console.log('\n--- Testing OpenWeather API ---');
     const openWeatherResult = await climateAPI.getOpenWeatherData(city);
     
-    // Test IMD individually  
     console.log('\n--- Testing IMD API ---');
     const imdResult = await climateAPI.getIMDWeather(cityId);
     
@@ -110,10 +130,16 @@ router.get('/debug/:city', async (req, res) => {
       cityId,
       apiKeyConfigured: !!process.env.OPENWEATHER_API_KEY,
       apiKeyLength: process.env.OPENWEATHER_API_KEY?.length || 0,
-      openWeatherResult: openWeatherResult ? 'SUCCESS' : 'FAILED',
-      imdResult: imdResult ? 'SUCCESS' : 'FAILED',
-      openWeatherData: openWeatherResult,
-      imdData: imdResult
+      testResults: {
+        openMeteo: openMeteoResult ? 'SUCCESS' : 'FAILED',
+        openWeather: openWeatherResult ? 'SUCCESS' : 'FAILED',
+        imd: imdResult ? 'SUCCESS' : 'FAILED'
+      },
+      detailedData: {
+        openMeteoData: openMeteoResult,
+        openWeatherData: openWeatherResult,
+        imdData: imdResult
+      }
     };
     
     return res.json({ success: true, debug: debugInfo });
@@ -262,6 +288,209 @@ router.get('/states', async (req, res) => {
 });
 
 // ==================== ENHANCED WEATHER ENDPOINTS ====================
+
+// Get detailed Open-Meteo weather data with forecasts
+router.get('/meteo/:city', async (req, res) => {
+  try {
+    const city = req.params.city;
+    
+    console.log(`Fetching detailed Open-Meteo data for ${city}...`);
+    const meteoData = await climateAPI.getOpenMeteoWeather(city);
+    
+    if (!meteoData) {
+      return res.status(404).json({
+        success: false,
+        error: `Could not fetch weather data for ${city} from Open-Meteo`
+      });
+    }
+    
+    return res.json({
+      success: true,
+      source: 'Open-Meteo',
+      city: city,
+      coordinates: meteoData.coords,
+      current: {
+        temperature: meteoData.data.main.temp,
+        feels_like: meteoData.data.main.feels_like,
+        humidity: meteoData.data.main.humidity,
+        pressure: meteoData.data.main.pressure,
+        wind_speed: meteoData.data.wind.speed,
+        wind_direction: meteoData.data.wind.deg,
+        precipitation: meteoData.data.rain['1h'],
+        uv_index: meteoData.data.uv_index,
+        weather_description: meteoData.data.weather[0].description,
+        is_day: meteoData.data.is_day,
+        cloud_cover: meteoData.data.clouds.all,
+        visibility: meteoData.data.visibility
+      },
+      agricultural: {
+        heat_index: meteoData.data.heat_index,
+        soil_temperature: meteoData.data.soil_temperature,
+        soil_moisture: meteoData.data.soil_moisture,
+        evapotranspiration: meteoData.data.evapotranspiration,
+        growing_degree_days: meteoData.data.growing_degree_days,
+        dew_point: meteoData.data.dew_point
+      },
+      forecasts: {
+        hourly: meteoData.data.hourly_forecast,
+        daily: meteoData.data.daily_forecast
+      },
+      generated_at: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error in /meteo/:city route:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get weather for ANY location (city, village, area) - NEW ENHANCED ENDPOINT
+router.get('/location/:location', async (req, res) => {
+  try {
+    const location = req.params.location;
+    const country = req.query.country; // Optional country parameter
+    
+    console.log(`Fetching weather for any location: ${location}${country ? `, ${country}` : ''}`);
+    
+    const weatherData = await climateAPI.getWeatherForAnyLocation(location, country);
+    
+    if (!weatherData.success) {
+      return res.status(404).json(weatherData);
+    }
+    
+    return res.json(weatherData);
+    
+  } catch (error) {
+    console.error('Error in /location/:location route:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      location: req.params.location
+    });
+  }
+});
+
+// Search for locations (cities, villages, areas) - LOCATION SEARCH ENDPOINT
+router.get('/search/:query', async (req, res) => {
+  try {
+    const query = req.params.query;
+    const country = req.query.country;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    console.log(`Searching for locations matching: ${query}`);
+    
+    const searchParams = {
+      name: query,
+      count: limit,
+      language: 'en',
+      format: 'json'
+    };
+    
+    if (country) {
+      searchParams.country = country;
+    }
+    
+    const response = await axios.get(`${climateAPI.geocodingURL}/search`, {
+      params: searchParams
+    });
+    
+    if (!response.data || !response.data.results) {
+      return res.json({
+        success: false,
+        message: 'No locations found',
+        query: query,
+        results: []
+      });
+    }
+    
+    const locations = response.data.results.map(result => ({
+      name: result.name,
+      country: result.country,
+      admin1: result.admin1, // State/Province
+      admin2: result.admin2, // District/County  
+      admin3: result.admin3, // City/Town
+      admin4: result.admin4, // Village/Neighborhood
+      latitude: result.latitude,
+      longitude: result.longitude,
+      elevation: result.elevation,
+      timezone: result.timezone,
+      population: result.population,
+      postcodes: result.postcodes,
+      feature_code: result.feature_code // PPL = populated place, PPLC = capital, etc.
+    }));
+    
+    return res.json({
+      success: true,
+      query: query,
+      count: locations.length,
+      results: locations
+    });
+    
+  } catch (error) {
+    console.error('Error in location search route:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      query: req.params.query
+    });
+  }
+});
+
+// Get weather by exact coordinates - COORDINATES ENDPOINT
+router.get('/coordinates/:lat/:lon', async (req, res) => {
+  try {
+    const latitude = parseFloat(req.params.lat);
+    const longitude = parseFloat(req.params.lon);
+    
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid coordinates. Please provide valid latitude and longitude.'
+      });
+    }
+    
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return res.status(400).json({
+        success: false,
+        error: 'Coordinates out of range. Latitude: -90 to 90, Longitude: -180 to 180.'
+      });
+    }
+    
+    console.log(`Fetching weather for coordinates: ${latitude}, ${longitude}`);
+    
+    const locationInfo = {
+      latitude: latitude,
+      longitude: longitude,
+      name: `Location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      country: 'Unknown',
+      admin1: 'Unknown'
+    };
+    
+    const weatherData = await climateAPI.getDetailedWeatherByCoordinates(
+      latitude, 
+      longitude, 
+      locationInfo
+    );
+    
+    return res.json({
+      success: true,
+      coordinates: { latitude, longitude },
+      weather: weatherData,
+      source: 'Open-Meteo',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error in coordinates route:', error);
+    return res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      coordinates: {
+        latitude: req.params.lat,
+        longitude: req.params.lon
+      }
+    });
+  }
+});
 
 // Get latest weather for all cities
 router.get('/all', async (req, res) => {

@@ -46,16 +46,20 @@
     <!-- Controls Section -->
     <section class="controls-section">
       <div class="controls-container">
-        <div class="select-wrapper">
-          <i class="fas fa-map-marker-alt location-icon"></i>
-          <select id="citySelect" class="city-select">
-            <option value="Delhi">Delhi, Delhi</option>
-            <option value="Mumbai">Mumbai, Maharashtra</option>
-            <option value="Chennai">Chennai, Tamil Nadu</option>
-            <!-- More cities loaded dynamically -->
-          </select>
-          <i class="fas fa-chevron-down dropdown-icon"></i>
+        <!-- Location Search -->
+        <div class="location-search-container">
+          <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="locationSearch" class="location-search" placeholder="Search any city, village, or location worldwide..." autocomplete="off">
+            <button id="searchBtn" class="search-btn" onclick="searchLocation()">
+              <i class="fas fa-globe"></i>
+              <span>Search</span>
+            </button>
+          </div>
+          <!-- Search Results Dropdown -->
+          <div id="searchResults" class="search-results" style="display: none;"></div>
         </div>
+        
         <button id="refreshBtn" class="refresh-btn" onclick="refreshWeather()">
           <i class="fas fa-sync-alt"></i>
           <span>Refresh</span>
@@ -68,7 +72,6 @@
           <i class="fas fa-tractor"></i>
           <span>Farming Dashboard</span>
         </a>
-
       </div>
     </section>
 
@@ -79,7 +82,14 @@
           <h2 id="cityName" class="city-name">City Name</h2>
           <div class="city-meta">
             <span id="cityDetails" class="city-details">State • Region • Population</span>
+            <div class="coordinates-info" id="coordinatesInfo" style="display: none;">
+              <i class="fas fa-map-marker-alt"></i>
+              <span id="coordinates">Lat: 0.0000, Lon: 0.0000</span>
+            </div>
           </div>
+        </div>
+        <div class="location-badges" id="locationBadges" style="display: none;">
+          <!-- Location type badges will be added here -->
         </div>
       </div>
     </section>
@@ -151,6 +161,68 @@
             <i class="fas fa-sun weather-display-icon" id="weatherIcon"></i>
           </div>
         </div>
+        
+        <!-- Enhanced Weather Cards for Open-Meteo Data -->
+        
+        <!-- Wind Speed Card -->
+        <div class="weather-card wind-card">
+          <div class="card-header">
+            <i class="fas fa-wind card-icon"></i>
+            <h3 class="card-title">Wind</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="windSpeed">-- km/h</div>
+            <div class="card-subtitle" id="windDirection">Direction: --</div>
+          </div>
+          <div class="wind-animation">
+            <div class="wind-indicator" id="windIndicator"></div>
+          </div>
+        </div>
+        
+        <!-- Pressure Card -->
+        <div class="weather-card pressure-card">
+          <div class="card-header">
+            <i class="fas fa-tachometer-alt card-icon"></i>
+            <h3 class="card-title">Pressure</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="pressure">-- hPa</div>
+            <div class="card-subtitle" id="pressureTrend">Trend: --</div>
+          </div>
+          <div class="pressure-gauge">
+            <div class="gauge-fill" id="pressureGauge"></div>
+          </div>
+        </div>
+        
+        <!-- UV Index Card -->
+        <div class="weather-card uv-card">
+          <div class="card-header">
+            <i class="fas fa-sun card-icon"></i>
+            <h3 class="card-title">UV Index</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="uvIndex">--</div>
+            <div class="card-subtitle" id="uvLevel">Level: --</div>
+          </div>
+          <div class="uv-indicator">
+            <div class="uv-bar" id="uvBar"></div>
+          </div>
+        </div>
+        
+        <!-- Feels Like Card -->
+        <div class="weather-card feels-like-card">
+          <div class="card-header">
+            <i class="fas fa-thermometer-three-quarters card-icon"></i>
+            <h3 class="card-title">Feels Like</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="feelsLike">--°C</div>
+            <div class="card-subtitle">Apparent Temperature</div>
+          </div>
+          <div class="feels-like-animation">
+            <div class="temperature-wave"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -167,6 +239,87 @@
       </div>
     </section>
 
+    <!-- Weather Forecast Section -->
+    <section class="forecast-section" id="forecastSection" style="display: none;">
+      <div class="forecast-header">
+        <h2><i class="fas fa-calendar-alt"></i> Weather Forecast</h2>
+        <div class="forecast-tabs">
+          <button class="forecast-tab active" onclick="showHourlyForecast()">Hourly</button>
+          <button class="forecast-tab" onclick="showDailyForecast()">Daily</button>
+        </div>
+      </div>
+      
+      <!-- Hourly Forecast -->
+      <div class="hourly-forecast" id="hourlyForecast">
+        <div class="forecast-scroll" id="hourlyForecastData">
+          <!-- Hourly forecast cards will be loaded here -->
+        </div>
+      </div>
+      
+      <!-- Daily Forecast -->
+      <div class="daily-forecast" id="dailyForecast" style="display: none;">
+        <div class="daily-forecast-grid" id="dailyForecastData">
+          <!-- Daily forecast cards will be loaded here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Agricultural Data Section -->
+    <section class="agricultural-section" id="agriculturalSection" style="display: none;">
+      <div class="agricultural-header">
+        <h2><i class="fas fa-seedling"></i> Agricultural Weather Data</h2>
+      </div>
+      <div class="agricultural-grid">
+        <!-- Soil Temperature Card -->
+        <div class="weather-card soil-temp-card">
+          <div class="card-header">
+            <i class="fas fa-thermometer-empty card-icon"></i>
+            <h3 class="card-title">Soil Temperature</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="soilTemp">--°C</div>
+            <div class="card-subtitle">0-7cm depth</div>
+          </div>
+        </div>
+        
+        <!-- Soil Moisture Card -->
+        <div class="weather-card soil-moisture-card">
+          <div class="card-header">
+            <i class="fas fa-tint card-icon"></i>
+            <h3 class="card-title">Soil Moisture</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="soilMoisture">-- m³/m³</div>
+            <div class="card-subtitle">0-7cm depth</div>
+          </div>
+        </div>
+        
+        <!-- Evapotranspiration Card -->
+        <div class="weather-card evapotranspiration-card">
+          <div class="card-header">
+            <i class="fas fa-leaf card-icon"></i>
+            <h3 class="card-title">Evapotranspiration</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="evapotranspiration">-- mm</div>
+            <div class="card-subtitle">Reference ET₀</div>
+          </div>
+        </div>
+        
+        <!-- Precipitation Probability Card -->
+        <div class="weather-card precipitation-prob-card">
+          <div class="card-header">
+            <i class="fas fa-cloud-rain card-icon"></i>
+            <h3 class="card-title">Rain Probability</h3>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="precipitationProb">--%</div>
+            <div class="card-subtitle">Next 24 hours</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Data Info Section -->
     <section class="data-info-section">
       <div class="data-info-card" id="dataInfo">
@@ -177,6 +330,10 @@
         <div class="info-row">
           <i class="fas fa-clock info-icon"></i>
           <span id="lastUpdated" class="info-text">Last updated: --</span>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-globe info-icon"></i>
+          <span id="locationInfo" class="info-text">Location: Global</span>
         </div>
       </div>
     </section>

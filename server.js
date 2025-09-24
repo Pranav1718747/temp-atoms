@@ -46,7 +46,7 @@ const climateAPI = new ClimateAPIService();
 const climateDB = new ClimateDB();
 const alertService = new AlertService(climateDB, io);
 const farmingService = new FarmingService(climateDB);
-const mlService = new MLService(climateDB);
+const mlService = new MLService(climateDB, climateAPI);
 
 // Initialize route handlers with shared instances
 initializeRouter(climateAPI, climateDB);
@@ -120,42 +120,57 @@ setInterval(async () => {
     try {
       const weather = await climateAPI.getComprehensiveWeather(city, cityIds[city]);
       
-      if (weather.openWeatherData && weather.openWeatherData.data) {
+      // Prioritize Open-Meteo data, then OpenWeather, then fallback to mock
+      let primaryWeatherData;
+      let dataSource;
+      
+      if (weather.openMeteoData && weather.openMeteoData.data) {
+        primaryWeatherData = weather.openMeteoData.data;
+        dataSource = weather.openMeteoData.source || 'Open-Meteo';
+      } else if (weather.openWeatherData && weather.openWeatherData.data) {
+        primaryWeatherData = weather.openWeatherData.data;
+        dataSource = weather.openWeatherData.source || 'OpenWeather';
+      }
+      
+      if (primaryWeatherData) {
         const dataToSave = {
           city_name: city,
           city_id: cityIds[city],
-          temperature: weather.openWeatherData.data.main.temp,
-          feels_like: weather.openWeatherData.data.main.feels_like,
-          temp_min: weather.openWeatherData.data.main.temp_min,
-          temp_max: weather.openWeatherData.data.main.temp_max,
-          humidity: weather.openWeatherData.data.main.humidity,
-          pressure: weather.openWeatherData.data.main.pressure,
-          rainfall: weather.openWeatherData.data.rain?.['1h'] || 0,
-          wind_speed: weather.openWeatherData.data.wind?.speed,
-          wind_direction: weather.openWeatherData.data.wind?.deg,
-          wind_gust: weather.openWeatherData.data.wind?.gust,
-          visibility: weather.openWeatherData.data.visibility,
-          uv_index: weather.openWeatherData.data.uv_index,
-          cloud_cover: weather.openWeatherData.data.clouds?.all,
-          dew_point: weather.openWeatherData.data.dew_point,
+          temperature: primaryWeatherData.main.temp,
+          feels_like: primaryWeatherData.main.feels_like,
+          temp_min: primaryWeatherData.main.temp_min,
+          temp_max: primaryWeatherData.main.temp_max,
+          humidity: primaryWeatherData.main.humidity,
+          pressure: primaryWeatherData.main.pressure,
+          rainfall: primaryWeatherData.rain?.['1h'] || 0,
+          wind_speed: primaryWeatherData.wind?.speed,
+          wind_direction: primaryWeatherData.wind?.deg,
+          wind_gust: primaryWeatherData.wind?.gust,
+          visibility: primaryWeatherData.visibility,
+          uv_index: primaryWeatherData.uv_index,
+          cloud_cover: primaryWeatherData.clouds?.all,
+          dew_point: primaryWeatherData.dew_point,
           // Enhanced agricultural parameters
-          heat_index: weather.openWeatherData.data.heat_index,
-          wind_chill: weather.openWeatherData.data.wind_chill,
-          soil_temperature: weather.openWeatherData.data.soil_temperature,
-          soil_moisture: weather.openWeatherData.data.soil_moisture,
-          evapotranspiration: weather.openWeatherData.data.evapotranspiration,
-          growing_degree_days: weather.openWeatherData.data.growing_degree_days,
-          air_quality_pm25: weather.openWeatherData.data.air_quality?.pm25,
-          air_quality_pm10: weather.openWeatherData.data.air_quality?.pm10,
-          air_quality_index: weather.openWeatherData.data.air_quality?.aqi,
-          pressure_trend: weather.openWeatherData.data.pressure_trend,
-          moon_phase: weather.openWeatherData.data.moon_phase,
-          moon_illumination: weather.openWeatherData.data.moon_illumination,
-          weather_description: weather.openWeatherData.data.weather[0].description,
-          weather_condition: weather.openWeatherData.data.weather[0].main,
-          data_source: weather.openWeatherData.source || 'OpenWeather',
-          sunrise: weather.openWeatherData.data.sys?.sunrise,
-          sunset: weather.openWeatherData.data.sys?.sunset,
+          heat_index: primaryWeatherData.heat_index,
+          wind_chill: primaryWeatherData.wind_chill,
+          soil_temperature: primaryWeatherData.soil_temperature,
+          soil_moisture: primaryWeatherData.soil_moisture,
+          evapotranspiration: primaryWeatherData.evapotranspiration,
+          growing_degree_days: primaryWeatherData.growing_degree_days,
+          air_quality_pm25: primaryWeatherData.air_quality?.pm25,
+          air_quality_pm10: primaryWeatherData.air_quality?.pm10,
+          air_quality_index: primaryWeatherData.air_quality?.aqi,
+          pressure_trend: primaryWeatherData.pressure_trend,
+          moon_phase: primaryWeatherData.moon_phase,
+          moon_illumination: primaryWeatherData.moon_illumination,
+          weather_description: primaryWeatherData.weather[0].description,
+          weather_condition: primaryWeatherData.weather[0].main,
+          data_source: dataSource,
+          sunrise: primaryWeatherData.sys?.sunrise,
+          sunset: primaryWeatherData.sys?.sunset,
+          // Open-Meteo specific enhancements
+          is_day: primaryWeatherData.is_day,
+          sunshine_duration: primaryWeatherData.sunshine_duration,
         };
         climateDB.insertWeatherData(dataToSave);
         
@@ -168,14 +183,9 @@ setInterval(async () => {
         
         // Broadcast update to subscribed clients
         io.to(`weather_${city}`).emit('weather_update', dataToSave);
-        console.log(`Successfully fetched and saved weather for ${city}`);
+        console.log(`Successfully fetched and saved weather for ${city} from ${dataSource}`);
       } else {
-        console.error(`No weather data received for ${city}. Check your API key.`);
-        // Try to get data from IMD as fallback
-        if (weather.imdData && weather.imdData.data) {
-          console.log(`Using IMD data as fallback for ${city}`);
-          // Handle IMD data format here
-        }
+        console.error(`No weather data received for ${city} from any source.`);
       }
     } catch (err) {
       console.error(`Error fetching weather for ${city}:`, err.message);
@@ -196,22 +206,34 @@ async function fetchInitialWeather() {
 
       const weather = await climateAPI.getComprehensiveWeather(cityName, cityInfo.imd_id);
       
-      if (weather.openWeatherData && weather.openWeatherData.data) {
+      // Prioritize Open-Meteo data, then OpenWeather
+      let primaryWeatherData;
+      let dataSource;
+      
+      if (weather.openMeteoData && weather.openMeteoData.data) {
+        primaryWeatherData = weather.openMeteoData.data;
+        dataSource = weather.openMeteoData.source || 'Open-Meteo';
+      } else if (weather.openWeatherData && weather.openWeatherData.data) {
+        primaryWeatherData = weather.openWeatherData.data;
+        dataSource = weather.openWeatherData.source || 'OpenWeather';
+      }
+      
+      if (primaryWeatherData) {
         const dataToSave = {
           city_id: cityInfo.id,
           city_name: cityName,
-          temperature: weather.openWeatherData.data.main.temp,
-          feels_like: weather.openWeatherData.data.main.feels_like,
-          temp_min: weather.openWeatherData.data.main.temp_min,
-          temp_max: weather.openWeatherData.data.main.temp_max,
-          humidity: weather.openWeatherData.data.main.humidity,
-          pressure: weather.openWeatherData.data.main.pressure,
-          rainfall: weather.openWeatherData.data.rain?.['1h'] || 0,
-          wind_speed: weather.openWeatherData.data.wind?.speed,
-          wind_direction: weather.openWeatherData.data.wind?.deg,
-          weather_description: weather.openWeatherData.data.weather[0].description,
-          weather_condition: weather.openWeatherData.data.weather[0].main,
-          data_source: weather.openWeatherData.source || 'OpenWeather',
+          temperature: primaryWeatherData.main.temp,
+          feels_like: primaryWeatherData.main.feels_like,
+          temp_min: primaryWeatherData.main.temp_min,
+          temp_max: primaryWeatherData.main.temp_max,
+          humidity: primaryWeatherData.main.humidity,
+          pressure: primaryWeatherData.main.pressure,
+          rainfall: primaryWeatherData.rain?.['1h'] || 0,
+          wind_speed: primaryWeatherData.wind?.speed,
+          wind_direction: primaryWeatherData.wind?.deg,
+          weather_description: primaryWeatherData.weather[0].description,
+          weather_condition: primaryWeatherData.weather[0].main,
+          data_source: dataSource,
         };
         
         climateDB.insertWeatherData(dataToSave);
@@ -223,7 +245,7 @@ async function fetchInitialWeather() {
           console.error(`Error analyzing weather data for alerts in ${cityName}:`, alertError.message);
         }
         
-        console.log(`Successfully fetched and saved initial weather for ${cityName}`);
+        console.log(`Successfully fetched and saved initial weather for ${cityName} from ${dataSource}`);
       } else {
         console.error(`No initial weather data received for ${cityName}`);
       }

@@ -15,9 +15,301 @@ function initializeMLRouter(mlServiceInstance) {
 }
 
 /**
- * Get weather predictions for a city
- * GET /api/ml/weather/:city?days=7
+ * Get weather predictions enhanced with Open-Meteo data
+ * GET /api/ml/weather-enhanced/:city?days=7
  */
+router.get('/weather-enhanced/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+        const days = parseInt(req.query.days) || 7;
+
+        if (!mlService) {
+            return res.status(500).json({
+                success: false,
+                error: 'ML service not initialized'
+            });
+        }
+
+        // Get current weather with Open-Meteo data
+        const currentWeather = await mlService.climateAPI.getOpenMeteoWeather(city);
+        
+        let predictions;
+        if (currentWeather && currentWeather.data) {
+            // Use enhanced prediction with Open-Meteo forecasts
+            predictions = await mlService.getWeatherPredictionsEnhanced(city, days, currentWeather.data);
+        } else {
+            // Fallback to regular predictions
+            predictions = await mlService.getWeatherPredictions(city, days);
+        }
+        
+        res.json({
+            ...predictions,
+            enhanced: !!currentWeather,
+            dataSource: currentWeather ? 'Open-Meteo + ML' : 'ML Only',
+            currentWeather: currentWeather ? {
+                temperature: currentWeather.data.main.temp,
+                humidity: currentWeather.data.main.humidity,
+                pressure: currentWeather.data.main.pressure,
+                wind_speed: currentWeather.data.wind.speed,
+                weather_description: currentWeather.data.weather[0].description,
+                coordinates: currentWeather.coords
+            } : null
+        });
+        
+    } catch (error) {
+        console.error('Error in enhanced weather predictions route:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * Get environmental alerts enhanced with Open-Meteo data
+ * GET /api/ml/alerts-enhanced/:city
+ */
+router.get('/alerts-enhanced/:city', async (req, res) => {
+    try {
+        const { city } = req.params;
+
+        if (!mlService) {
+            return res.status(500).json({
+                success: false,
+                error: 'ML service not initialized'
+            });
+        }
+
+        // Get current weather and forecast from Open-Meteo
+        const openMeteoData = await mlService.climateAPI.getOpenMeteoWeather(city);
+        
+        let alerts;
+        if (openMeteoData && openMeteoData.data) {
+            // Enhanced alerts with Open-Meteo forecasts
+            const currentWeather = {
+                temperature: openMeteoData.data.main.temp,
+                humidity: openMeteoData.data.main.humidity,
+                pressure: openMeteoData.data.main.pressure,
+                rainfall: openMeteoData.data.rain['1h'],
+                wind_speed: openMeteoData.data.wind.speed,
+                is_day: openMeteoData.data.is_day
+            };
+            
+            alerts = await mlService.getAlertPredictionsEnhanced(
+                city, 
+                currentWeather, 
+                openMeteoData.data.daily_forecast
+            );
+        } else {
+            // Fallback to regular alerts
+            alerts = await mlService.getAlertPredictions(city);
+        }
+        
+        res.json({
+            ...alerts,
+            enhanced: !!openMeteoData,
+            dataSource: openMeteoData ? 'Open-Meteo + ML' : 'ML Only'
+        });
+        
+    } catch (error) {
+        console.error('Error in enhanced alerts route:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * Get ML predictions for ANY location (not just predefined cities)
+ * GET /api/ml/location/:location?country=optional&days=7
+ */
+router.get('/location/:location', async (req, res) => {
+    try {
+        const { location } = req.params;
+        const country = req.query.country;
+        const days = parseInt(req.query.days) || 7;
+        
+        if (!mlService) {
+            return res.status(500).json({
+                success: false,
+                error: 'ML service not initialized'
+            });
+        }
+        
+        console.log(`Getting ML predictions for location: ${location}${country ? `, ${country}` : ''}`);
+        
+        // Get comprehensive weather data for the location
+        const locationWeather = await mlService.climateAPI.getWeatherForAnyLocation(location, country);
+        
+        if (!locationWeather.success) {
+            return res.status(404).json(locationWeather);
+        }
+        
+        // Extract current weather for ML processing
+        const currentWeather = {
+            temperature: locationWeather.weather.current.temperature,
+            humidity: locationWeather.weather.current.humidity,
+            pressure: locationWeather.weather.current.pressure,
+            rainfall: locationWeather.weather.current.precipitation,
+            wind_speed: locationWeather.weather.current.wind_speed,
+            weather_description: locationWeather.weather.current.weather_description
+        };
+        
+        // Generate predictions
+        const [weatherPredictions, alertPredictions] = await Promise.allSettled([
+            // Weather predictions using the enhanced forecast data
+            mlService.weatherPredictor.predictWeather(
+                [], // No historical data for new locations
+                days,
+                {
+                    main: {
+                        temp: currentWeather.temperature,
+                        humidity: currentWeather.humidity,
+                        pressure: currentWeather.pressure
+                    },
+                    rain: { '1h': currentWeather.rainfall },
+                    wind: { speed: currentWeather.wind_speed },
+                    daily_forecast: locationWeather.weather.daily_forecast,
+                    hourly_forecast: locationWeather.weather.hourly_forecast
+                }
+            ),
+            // Alert predictions
+            mlService.alertPredictor.predictAlerts(
+                currentWeather,
+                locationWeather.weather.daily_forecast
+            )
+        ]);
+        
+        const response = {
+            success: true,
+            location: locationWeather.location,
+            currentWeather: currentWeather,
+            predictions: {
+                weather: weatherPredictions.status === 'fulfilled' ? 
+                    weatherPredictions.value : { error: weatherPredictions.reason?.message },
+                alerts: alertPredictions.status === 'fulfilled' ? 
+                    alertPredictions.value : { error: alertPredictions.reason?.message }
+            },
+            dataSource: 'Open-Meteo + ML Global',
+            coverage: 'Global - Any Location',
+            generatedAt: new Date().toISOString()
+        };
+        
+        return res.json(response);
+        
+    } catch (error) {
+        console.error('Error in ML location route:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            location: req.params.location
+        });
+    }
+});
+
+/**
+ * Get ML predictions by coordinates
+ * GET /api/ml/coordinates/:lat/:lon?days=7
+ */
+router.get('/coordinates/:lat/:lon', async (req, res) => {
+    try {
+        const latitude = parseFloat(req.params.lat);
+        const longitude = parseFloat(req.params.lon);
+        const days = parseInt(req.query.days) || 7;
+        
+        if (isNaN(latitude) || isNaN(longitude)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid coordinates. Please provide valid latitude and longitude.'
+            });
+        }
+        
+        if (!mlService) {
+            return res.status(500).json({
+                success: false,
+                error: 'ML service not initialized'
+            });
+        }
+        
+        console.log(`Getting ML predictions for coordinates: ${latitude}, ${longitude}`);
+        
+        const locationInfo = {
+            latitude: latitude,
+            longitude: longitude,
+            name: `Location ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+            country: 'Unknown',
+            admin1: 'Unknown'
+        };
+        
+        // Get weather data by coordinates
+        const weatherData = await mlService.climateAPI.getDetailedWeatherByCoordinates(
+            latitude, longitude, locationInfo
+        );
+        
+        // Extract current weather for ML processing
+        const currentWeather = {
+            temperature: weatherData.current.temperature,
+            humidity: weatherData.current.humidity,
+            pressure: weatherData.current.pressure,
+            rainfall: weatherData.current.precipitation,
+            wind_speed: weatherData.current.wind_speed,
+            weather_description: weatherData.current.weather_description
+        };
+        
+        // Generate predictions
+        const [weatherPredictions, alertPredictions] = await Promise.allSettled([
+            mlService.weatherPredictor.predictWeather(
+                [], // No historical data for coordinate-based requests
+                days,
+                {
+                    main: {
+                        temp: currentWeather.temperature,
+                        humidity: currentWeather.humidity,
+                        pressure: currentWeather.pressure
+                    },
+                    rain: { '1h': currentWeather.rainfall },
+                    wind: { speed: currentWeather.wind_speed },
+                    daily_forecast: weatherData.daily_forecast,
+                    hourly_forecast: weatherData.hourly_forecast
+                }
+            ),
+            mlService.alertPredictor.predictAlerts(
+                currentWeather,
+                weatherData.daily_forecast
+            )
+        ]);
+        
+        const response = {
+            success: true,
+            coordinates: { latitude, longitude },
+            location: locationInfo,
+            currentWeather: currentWeather,
+            predictions: {
+                weather: weatherPredictions.status === 'fulfilled' ? 
+                    weatherPredictions.value : { error: weatherPredictions.reason?.message },
+                alerts: alertPredictions.status === 'fulfilled' ? 
+                    alertPredictions.value : { error: alertPredictions.reason?.message }
+            },
+            dataSource: 'Open-Meteo + ML Coordinates',
+            coverage: 'Global - Any Coordinates',
+            generatedAt: new Date().toISOString()
+        };
+        
+        return res.json(response);
+        
+    } catch (error) {
+        console.error('Error in ML coordinates route:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            coordinates: {
+                latitude: req.params.lat,
+                longitude: req.params.lon
+            }
+        });
+    }
+});
 router.get('/weather/:city', async (req, res) => {
     try {
         const { city } = req.params;

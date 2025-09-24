@@ -50,13 +50,20 @@
     <!-- Controls Section -->
     <section class="farming-controls">
       <div class="controls-grid">
-        <div class="control-group">
-          <label for="citySelect">📍 Select Your Location</label>
-          <select id="citySelect" class="farming-select">
-            <option value="Delhi">Delhi</option>
-            <option value="Mumbai">Mumbai</option>
-            <option value="Chennai">Chennai</option>
-          </select>
+        <div class="control-group location-search-group">
+          <label>📍 Search Your Location</label>
+          <div class="location-search-container">
+            <div class="search-wrapper">
+              <i class="fas fa-search search-icon"></i>
+              <input type="text" id="locationSearch" class="location-search farming-search" placeholder="Search any city, village, or location worldwide..." autocomplete="off">
+              <button id="searchBtn" class="search-btn farming-search-btn" onclick="searchLocation()">
+                <i class="fas fa-globe"></i>
+                <span>Search</span>
+              </button>
+            </div>
+            <!-- Search Results Dropdown -->
+            <div id="searchResults" class="search-results" style="display: none;"></div>
+          </div>
         </div>
         <div class="control-group">
           <label for="cropSelect">🌾 Select Your Crop</label>
@@ -407,6 +414,10 @@
         <button class="action-btn" onclick="showExpertTips()">
           <i class="fas fa-lightbulb"></i>
           <span>Expert Tips</span>
+        </button>
+        <button class="action-btn" onclick="testComprehensiveWeatherManual()" style="background: #ff4444; color: white;">
+          <i class="fas fa-bug"></i>
+          <span>TEST Weather</span>
         </button>
       </div>
     </section>

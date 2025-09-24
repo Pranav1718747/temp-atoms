@@ -76,7 +76,7 @@ class AlertPredictor {
     /**
      * Predict environmental alerts based on current and forecast data
      * @param {Object} currentWeather - Current weather conditions
-     * @param {Array} forecastData - Weather forecast for next days
+     * @param {Array} forecastData - Weather forecast for next days (can be Open-Meteo format)
      * @returns {Object} Alert predictions
      */
     async predictAlerts(currentWeather, forecastData = []) {
@@ -85,13 +85,16 @@ class AlertPredictor {
         }
 
         try {
+            // Normalize forecast data to common format
+            const normalizedForecast = this.normalizeForecastData(forecastData);
+            
             const alerts = {};
 
             // Predict each type of alert
-            alerts.heatwave = await this.alertModels.heatwave.predict(currentWeather, forecastData);
-            alerts.flood = await this.alertModels.flood.predict(currentWeather, forecastData);
-            alerts.drought = await this.alertModels.drought.predict(currentWeather, forecastData);
-            alerts.coastal = await this.alertModels.coastal.predict(currentWeather, forecastData);
+            alerts.heatwave = await this.alertModels.heatwave.predict(currentWeather, normalizedForecast);
+            alerts.flood = await this.alertModels.flood.predict(currentWeather, normalizedForecast);
+            alerts.drought = await this.alertModels.drought.predict(currentWeather, normalizedForecast);
+            alerts.coastal = await this.alertModels.coastal.predict(currentWeather, normalizedForecast);
 
             // Calculate overall risk assessment
             const overallRisk = this.calculateOverallRisk(alerts);
@@ -101,11 +104,51 @@ class AlertPredictor {
                 overallRisk,
                 recommendations: this.generateRecommendations(alerts),
                 generatedAt: new Date().toISOString(),
-                validFor: '24 hours'
+                validFor: '24 hours',
+                dataSource: this.detectDataSource(currentWeather)
             };
         } catch (error) {
             console.error('Error in alert prediction:', error);
             throw error;
+        }
+    }
+    
+    /**
+     * Normalize forecast data from different APIs to common format
+     */
+    normalizeForecastData(forecastData) {
+        if (!forecastData || forecastData.length === 0) {
+            return [];
+        }
+        
+        // Check if this is Open-Meteo daily forecast format
+        if (forecastData[0] && forecastData[0].temp_min !== undefined) {
+            return forecastData.map(day => ({
+                temperature: (day.temp_min + day.temp_max) / 2,
+                temp_min: day.temp_min,
+                temp_max: day.temp_max,
+                rainfall: day.precipitation || 0,
+                humidity: day.humidity || 60, // Default if not available
+                pressure: day.pressure || 1013, // Default if not available
+                wind_speed: day.wind_speed_max || day.wind_speed || 0,
+                date: day.date
+            }));
+        }
+        
+        // Return as-is if already in correct format
+        return forecastData;
+    }
+    
+    /**
+     * Detect data source from weather object structure
+     */
+    detectDataSource(currentWeather) {
+        if (currentWeather.is_day !== undefined) {
+            return 'Open-Meteo Enhanced';
+        } else if (currentWeather.weather && currentWeather.main) {
+            return 'OpenWeather Compatible';
+        } else {
+            return 'Custom Format';
         }
     }
 

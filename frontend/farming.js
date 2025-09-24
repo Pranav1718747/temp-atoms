@@ -6,20 +6,690 @@ let currentCity = 'Delhi';
 let currentCrop = 'rice';
 let currentStage = 'vegetative';
 let availableCities = [];
+let searchTimeout = null;
+let currentSearchData = null;
+let currentLocationData = null;
 
 // DOM elements
-const citySelect = document.getElementById('citySelect');
 const cropSelect = document.getElementById('cropSelect');
 const stageSelect = document.getElementById('stageSelect');
 
-// Setup event listeners
-function setupEventListeners() {
-  citySelect.addEventListener('change', () => {
-    currentCity = citySelect.value;
-    console.log(`City changed to: ${currentCity}`);
-    loadFarmingDashboard();
+// ===== LOCATION SEARCH FUNCTIONALITY =====
+
+// Global location search function
+async function searchLocation() {
+  const searchInput = document.getElementById('locationSearch');
+  const query = searchInput.value.trim();
+  
+  if (!query) {
+    showNotification('Please enter a location to search', 'warning');
+    return;
+  }
+  
+  await performLocationSearch(query);
+}
+
+// Perform location search with API
+async function performLocationSearch(query) {
+  try {
+    showLoading();
+    console.log('Searching for location:', query);
+    
+    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success && result.results && result.results.length > 0) {
+      displaySearchResults(result.results);
+      hideLoading();
+    } else if (result.success && result.data && result.data.length > 0) {
+      displaySearchResults(result.data);
+      hideLoading();
+    } else {
+      hideLoading();
+      showSearchError('No locations found for your search. Try searching for a different city or village.');
+    }
+  } catch (error) {
+    console.error('Error searching location:', error);
+    hideLoading();
+    showSearchError('Failed to search location. Please check your connection and try again.');
+  }
+}
+
+// Quiet search for auto-complete
+async function performLocationSearchQuiet(query) {
+  try {
+    console.log('Auto-searching for location:', query);
+    
+    const response = await fetch(`http://localhost:4001/api/weather/search/${encodeURIComponent(query)}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success && result.results && result.results.length > 0) {
+      displaySearchResults(result.results);
+    } else if (result.success && result.data && result.data.length > 0) {
+      displaySearchResults(result.data);
+    } else {
+      showSearchError('No locations found for your search.');
+    }
+  } catch (error) {
+    console.error('Error searching location:', error);
+    showSearchError('Failed to search location.');
+  }
+}
+
+// Display search results
+function displaySearchResults(locations) {
+  const resultsContainer = document.getElementById('searchResults');
+  
+  if (!locations || locations.length === 0) {
+    showSearchError('No locations found.');
+    return;
+  }
+  
+  let html = '<div class="search-results-header">Found Locations:</div>';
+  
+  locations.forEach((location, index) => {
+    const country = location.country || 'Unknown';
+    const state = location.admin1 || location.state || '';
+    const region = location.admin2 || location.admin3 || '';
+    const population = location.population ? `${(location.population / 1000).toFixed(0)}K people` : '';
+    
+    let locationDescription = '';
+    if (state && region) {
+      locationDescription = `${state} • ${region}`;
+    } else if (state) {
+      locationDescription = state;
+    } else if (region) {
+      locationDescription = region;
+    }
+    
+    html += `
+      <div class="search-result-item" onclick="selectSearchLocation(${index})">
+        <div class="result-main">
+          <strong>${location.name}</strong>
+          <span class="result-country">${country}</span>
+        </div>
+        <div class="result-details">
+          ${locationDescription ? `${locationDescription} • ` : ''}${population}
+          <span class="result-coords">📍 ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}</span>
+        </div>
+      </div>
+    `;
   });
   
+  resultsContainer.innerHTML = html;
+  resultsContainer.style.display = 'block';
+  
+  currentSearchData = locations;
+  console.log('Displayed', locations.length, 'search results');
+}
+
+// Select a location from search results
+async function selectSearchLocation(index) {
+  if (!currentSearchData || !currentSearchData[index]) {
+    return;
+  }
+  
+  const location = currentSearchData[index];
+  
+  // Hide search results
+  document.getElementById('searchResults').style.display = 'none';
+  
+  // Update current location
+  currentCity = location.name;
+  currentLocationData = location;
+  
+  // Show notification
+  showNotification(`Selected: ${location.name}, ${location.country}`, 'success');
+  
+  // For global locations, fetch weather data directly using coordinates
+  await loadGlobalLocationWeather(location);
+}
+
+// Show search error
+function showSearchError(message) {
+  const resultsContainer = document.getElementById('searchResults');
+  resultsContainer.innerHTML = `<div class="search-error">${message}</div>`;
+  resultsContainer.style.display = 'block';
+  console.log('Search error:', message);
+}
+
+// Auto-complete search as user types
+document.getElementById('locationSearch').addEventListener('input', (e) => {
+  const query = e.target.value.trim();
+  
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  
+  if (query.length < 2) {
+    document.getElementById('searchResults').style.display = 'none';
+    return;
+  }
+  
+  searchTimeout = setTimeout(() => {
+    performLocationSearchQuiet(query);
+  }, 800);
+});
+
+// Hide search results when clicking outside
+document.addEventListener('click', (e) => {
+  const searchContainer = document.querySelector('.location-search-container');
+  if (!searchContainer.contains(e.target)) {
+    document.getElementById('searchResults').style.display = 'none';
+  }
+});
+
+// Allow Enter key to search
+document.getElementById('locationSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchLocation();
+  }
+});
+
+// ===== END LOCATION SEARCH FUNCTIONALITY =====
+
+// Load weather data for global locations using coordinates
+async function loadGlobalLocationWeather(location) {
+  try {
+    console.log('Loading global weather for:', location.name, 'at', location.latitude, location.longitude);
+    showLoading();
+    
+    // Fetch weather data using coordinates
+    const response = await fetch(`http://localhost:4001/api/weather/coordinates/${location.latitude}/${location.longitude}`);
+    console.log('Global weather API response status:', response.status);
+    
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    
+    const result = await response.json();
+    console.log('=== FULL API RESPONSE FOR', location.name, '===');
+    console.log('Raw API result:', result);
+    
+    if (result.success && result.weather) {
+      console.log('=== WEATHER DATA STRUCTURE ===');
+      console.log('result.weather:', result.weather);
+      console.log('result.weather.current:', result.weather.current);
+      
+      if (result.weather.current) {
+        console.log('=== INDIVIDUAL WEATHER VALUES ===');
+        console.log('Temperature:', result.weather.current.temperature, typeof result.weather.current.temperature);
+        console.log('Humidity:', result.weather.current.humidity, typeof result.weather.current.humidity);
+        console.log('Pressure:', result.weather.current.pressure, typeof result.weather.current.pressure);
+        console.log('Wind Speed:', result.weather.current.wind_speed, typeof result.weather.current.wind_speed);
+        console.log('Wind Direction:', result.weather.current.wind_direction, typeof result.weather.current.wind_direction);
+        console.log('UV Index:', result.weather.current.uv_index, typeof result.weather.current.uv_index);
+        console.log('Precipitation:', result.weather.current.precipitation, typeof result.weather.current.precipitation);
+      }
+      
+      // Transform the data to match farming dashboard format
+      const farmingData = transformGlobalWeatherForFarming(result.weather, location);
+      console.log('Transformed farming data for', location.name, ':', farmingData);
+      
+      // Update the farming dashboard with the transformed data
+      updateFarmingDashboardWithGlobalData(farmingData, location);
+    } else {
+      console.error('API response missing weather data:', result);
+      throw new Error(result.error || 'Failed to load weather data');
+    }
+    
+  } catch (error) {
+    console.error('Error loading global weather:', error);
+    showError(`Failed to load weather data for ${location.name}. Please try again.`);
+  } finally {
+    hideLoading();
+  }
+}
+
+// Transform global weather data to farming dashboard format
+function transformGlobalWeatherForFarming(weatherData, location) {
+  console.log('=== TRANSFORMATION START FOR', location.name, '===');
+  console.log('Input weatherData:', weatherData);
+  
+  const current = weatherData.current;
+  console.log('Current weather object:', current);
+  
+  if (!current) {
+    console.error('No current weather data found!');
+    // Return with all fallback values if no current data
+    return createFallbackWeatherData(location);
+  }
+  
+  // Extract actual values, only use fallbacks if undefined/null
+  const temperature = (current.temperature !== undefined && current.temperature !== null) ? current.temperature : 25;
+  const humidity = (current.humidity !== undefined && current.humidity !== null) ? current.humidity : 60;
+  const precipitation = (current.precipitation !== undefined && current.precipitation !== null) ? current.precipitation : 0;
+  const pressure = (current.pressure !== undefined && current.pressure !== null) ? current.pressure : 1013;
+  const windSpeed = (current.wind_speed !== undefined && current.wind_speed !== null) ? current.wind_speed : 5;
+  const windDirection = (current.wind_direction !== undefined && current.wind_direction !== null) ? current.wind_direction : 0;
+  const uvIndex = (current.uv_index !== undefined && current.uv_index !== null) ? current.uv_index : 3;
+  
+  console.log('=== EXTRACTED VALUES FOR', location.name, '===');
+  console.log('Temperature:', temperature, '(original:', current.temperature, ')');
+  console.log('Humidity:', humidity, '(original:', current.humidity, ')');
+  console.log('Precipitation:', precipitation, '(original:', current.precipitation, ')');
+  console.log('Pressure:', pressure, '(original:', current.pressure, ')');
+  console.log('Wind Speed:', windSpeed, '(original:', current.wind_speed, ')');
+  console.log('Wind Direction:', windDirection, '(original:', current.wind_direction, ')');
+  console.log('UV Index:', uvIndex, '(original:', current.uv_index, ')');
+  
+  // Check if we're getting any real data vs all fallbacks
+  const usingFallbacks = {
+    temperature: current.temperature === undefined || current.temperature === null,
+    humidity: current.humidity === undefined || current.humidity === null,
+    pressure: current.pressure === undefined || current.pressure === null,
+    wind: current.wind_speed === undefined || current.wind_speed === null
+  };
+  console.log('Using fallbacks for:', usingFallbacks);
+  
+  // Calculate overall condition based on temperature, humidity, and rainfall
+  const tempGood = temperature >= 15 && temperature <= 35;
+  const humidityGood = humidity >= 40 && humidity <= 80;
+  const rainfallGood = precipitation >= 1 && precipitation <= 10;
+  
+  let overallCondition = 'good';
+  if (!tempGood || !humidityGood || !rainfallGood) {
+    const badConditions = [!tempGood, !humidityGood, !rainfallGood].filter(Boolean).length;
+    overallCondition = badConditions >= 2 ? 'poor' : 'fair';
+  }
+  
+  // Calculate additional weather metrics for comprehensive display using actual data
+  const heatIndex = calculateHeatIndex(temperature, humidity);
+  const soilTemperature = temperature - 5; // Approximate soil temp from air temp
+  const soilMoisture = Math.min(100, Math.max(20, humidity + (precipitation * 5))); // More realistic soil moisture
+  const growingDegreeDays = Math.max(0, (temperature - 10)); // Base temp 10°C
+  
+  // Calculate pressure trend based on pressure (simplified)
+  let pressureTrend = 'stable';
+  if (pressure > 1020) pressureTrend = 'rising';
+  else if (pressure < 1000) pressureTrend = 'falling';
+  
+  // Calculate air quality estimate based on weather conditions
+  let estimatedAQI = 50; // Default moderate
+  if (precipitation > 2) estimatedAQI = 30; // Rain improves air quality
+  else if (windSpeed > 10) estimatedAQI = 40; // Wind disperses pollution
+  else if (humidity > 80) estimatedAQI = 60; // High humidity can trap pollutants
+  
+  const transformedData = {
+    weather: {
+      temperature: temperature,
+      humidity: humidity,
+      rainfall: precipitation,
+      pressure: pressure,
+      wind_speed: windSpeed,
+      wind_direction: windDirection,
+      uv_index: uvIndex,
+      weather_description: current.weather_code ? getWeatherDescription(current.weather_code) : 'Current weather conditions',
+      // Additional comprehensive weather data using real calculations
+      pressure_trend: pressureTrend,
+      air_quality: { aqi: estimatedAQI },
+      soil_temperature: soilTemperature,
+      soil_moisture: soilMoisture,
+      growing_degree_days: growingDegreeDays,
+      heat_index: heatIndex,
+      moon_phase: getCurrentMoonPhase(),
+      moon_illumination: getMoonIllumination()
+    },
+    location: {
+      name: location.name,
+      country: location.country,
+      latitude: location.latitude,
+      longitude: location.longitude
+    },
+    selected_crop: {
+      recommendations: {
+        conditions: {
+          overall: overallCondition,
+          temperature: {
+            status: temperature > 30 ? 'hot' : temperature < 15 ? 'cold' : 'good',
+            message: temperature > 30 ? `High temperature (${temperature}°C) may stress crops` : temperature < 15 ? `Low temperature (${temperature}°C) may slow growth` : `Temperature (${temperature}°C) is suitable for farming`
+          },
+          humidity: {
+            status: humidity > 80 ? 'humid' : humidity < 40 ? 'dry' : 'good',
+            message: humidity > 80 ? `High humidity (${humidity}%) - watch for fungal diseases` : humidity < 40 ? `Low humidity (${humidity}%) - ensure adequate irrigation` : `Humidity (${humidity}%) levels are good`
+          },
+          water: {
+            status: precipitation > 5 ? 'wet' : precipitation > 1 ? 'moderate' : 'dry',
+            message: precipitation > 5 ? `Good rainfall (${precipitation}mm) for crops` : precipitation > 1 ? `Moderate rainfall (${precipitation}mm)` : `Low rainfall (${precipitation}mm) - irrigation may be needed`
+          }
+        },
+        irrigation: {
+          icon: precipitation < 2 ? '🚿' : '💧',
+          advice: precipitation < 2 ? 'Irrigation recommended due to low rainfall' : 'Monitor soil moisture levels',
+          frequency: precipitation < 2 ? 'daily' : 'moderate',
+          message: precipitation < 2 ? `Low rainfall (${precipitation}mm) detected. Regular irrigation needed.` : `Adequate moisture (${precipitation}mm). Monitor soil conditions.`,
+          amount: '25-30mm per week',
+          urgency: precipitation < 1 ? 'high' : 'medium'
+        }
+      },
+      // Add crop key for visual functions
+      key: 'rice'
+    },
+    suitable_crops: [],
+    farming_alerts: []
+  };
+  
+  console.log('=== FINAL TRANSFORMED DATA FOR', location.name, '===');
+  console.log('Weather section:', transformedData.weather);
+  return transformedData;
+}
+
+// Helper function to create fallback weather data
+function createFallbackWeatherData(location) {
+  console.warn('Creating fallback weather data for', location.name);
+  return {
+    weather: {
+      temperature: 25,
+      humidity: 60,
+      rainfall: 0,
+      pressure: 1013,
+      wind_speed: 5,
+      wind_direction: 0,
+      uv_index: 3,
+      weather_description: 'No data available',
+      pressure_trend: 'stable',
+      air_quality: { aqi: 50 },
+      soil_temperature: 20,
+      soil_moisture: 60,
+      growing_degree_days: 15,
+      heat_index: 25,
+      moon_phase: getCurrentMoonPhase(),
+      moon_illumination: getMoonIllumination()
+    },
+    location: { name: location.name, country: location.country, latitude: location.latitude, longitude: location.longitude },
+    selected_crop: { recommendations: { conditions: { overall: 'fair' }, irrigation: { icon: '💧', frequency: 'moderate' } }, key: 'rice' },
+    suitable_crops: [], farming_alerts: []
+  };
+}
+
+// Helper function to calculate heat index
+function calculateHeatIndex(temp, humidity) {
+  // Simplified heat index calculation
+  if (temp < 27) return temp;
+  
+  const T = temp;
+  const RH = humidity;
+  
+  let HI = 0.5 * (T + 61.0 + ((T - 68.0) * 1.2) + (RH * 0.094));
+  
+  if (HI >= 80) {
+    HI = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH;
+  }
+  
+  return Math.round(HI);
+}
+
+// Helper function to get weather description from weather code
+function getWeatherDescription(code) {
+  const descriptions = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Fog',
+    48: 'Depositing rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    61: 'Slight rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    71: 'Slight snow',
+    73: 'Moderate snow',
+    75: 'Heavy snow',
+    77: 'Snow grains',
+    80: 'Slight rain showers',
+    81: 'Moderate rain showers',
+    82: 'Violent rain showers',
+    85: 'Slight snow showers',
+    86: 'Heavy snow showers',
+    95: 'Thunderstorm',
+    96: 'Thunderstorm with hail',
+    99: 'Thunderstorm with heavy hail'
+  };
+  
+  return descriptions[code] || 'Current weather conditions';
+}
+
+// Helper function to get current moon phase
+function getCurrentMoonPhase() {
+  const phases = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+  const today = new Date();
+  const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const phaseIndex = Math.floor((dayOfYear % 29.5) / 29.5 * 8);
+  return phases[phaseIndex];
+}
+
+// Helper function to get moon illumination percentage
+function getMoonIllumination() {
+  const today = new Date();
+  const dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const lunarCycle = (dayOfYear % 29.5) / 29.5;
+  
+  // Calculate illumination percentage based on lunar cycle
+  let illumination;
+  if (lunarCycle <= 0.5) {
+    // Waxing phase (new moon to full moon)
+    illumination = lunarCycle * 2 * 100;
+  } else {
+    // Waning phase (full moon to new moon)
+    illumination = (1 - (lunarCycle - 0.5) * 2) * 100;
+  }
+  
+  return Math.round(illumination);
+}
+
+// Clear comprehensive weather display to force refresh
+function clearComprehensiveWeatherDisplay() {
+  console.log('Clearing comprehensive weather display...');
+  
+  // Reset all display elements to loading state
+  const elements = {
+    'pressureValue': '--',
+    'windSpeed': '-- km/h',
+    'windDirectionText': '--',
+    'uvValue': '--',
+    'uvLevel': 'Loading...',
+    'aqiValue': '--',
+    'aqiStatus': 'Loading...',
+    'soilTemp': '--',
+    'soilMoisture': '--',
+    'gddValue': '--',
+    'heatIndexValue': '--°C',
+    'heatIndexLevel': 'Loading...',
+    'moonIcon': '🌙',
+    'moonPhaseName': '--',
+    'moonIllumination': '-- % visible'
+  };
+  
+  Object.keys(elements).forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.textContent = elements[id];
+      // Reset any classes
+      element.className = element.className.split(' ')[0]; // Keep only the base class
+    }
+  });
+  
+  // Reset gauge and progress elements
+  const gauges = ['pressureGauge', 'aqiCircle', 'soilTempBar', 'soilMoistureCircle', 'gddProgress'];
+  gauges.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      if (element.style.strokeDashoffset !== undefined) {
+        element.style.strokeDashoffset = '0';
+      }
+      if (element.style.width !== undefined) {
+        element.style.width = '0%';
+      }
+    }
+  });
+}
+
+// Update farming dashboard with global weather data
+function updateFarmingDashboardWithGlobalData(data, location) {
+  console.log('=== UPDATING DASHBOARD FOR', location.name, '===');
+  console.log('Input data:', data);
+  console.log('Weather data being passed:', data.weather);
+  
+  // Update weather summary cards (this works!)
+  updateWeatherSummary(data.weather, data.selected_crop.recommendations);
+  
+  // Use the SAME weather data that works for temp/humidity for comprehensive display
+  console.log('=== UPDATING COMPREHENSIVE WEATHER WITH SAME DATA ===');
+  updateComprehensiveWeatherFromBasicData(data.weather);
+  
+  // Update comprehensive weather scene
+  updateComprehensiveWeatherScene(data.weather);
+  
+  // Update enhanced weather display with available data
+  updateGlobalWeatherDisplay(data.weather);
+  
+  // Update overall condition
+  updateOverallCondition(data.selected_crop.recommendations.conditions);
+  
+  // Update basic recommendations
+  updateBasicRecommendations(data.selected_crop.recommendations);
+  
+  // Update irrigation advice
+  updateIrrigation(data.selected_crop.recommendations.irrigation);
+  
+  // Clear crops and alerts sections for global locations
+  clearCropsAndAlerts();
+  
+  console.log('=== DASHBOARD UPDATE COMPLETED FOR', location.name, '===');
+}
+
+// Update enhanced weather display for global locations
+function updateGlobalWeatherDisplay(weather) {
+  // Update pressure
+  if (weather.pressure) {
+    document.getElementById('pressureValue').textContent = `${weather.pressure.toFixed(0)}`;
+  }
+  
+  // Update wind
+  if (weather.wind_speed && weather.wind_direction) {
+    document.getElementById('windSpeed').textContent = `${weather.wind_speed.toFixed(1)} km/h`;
+    document.getElementById('windDirectionText').textContent = getWindDirection(weather.wind_direction);
+    
+    // Update wind arrow
+    const windArrow = document.getElementById('windArrow');
+    if (windArrow) {
+      windArrow.style.transform = `rotate(${weather.wind_direction}deg)`;
+    }
+  }
+  
+  // Update UV index
+  if (weather.uv_index) {
+    document.getElementById('uvValue').textContent = weather.uv_index.toFixed(1);
+    document.getElementById('uvLevel').textContent = getUVLevel(weather.uv_index);
+  }
+}
+
+// Helper function to get wind direction
+function getWindDirection(degrees) {
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const index = Math.round(degrees / 22.5) % 16;
+  return directions[index];
+}
+
+// Helper function to get UV level
+function getUVLevel(uvIndex) {
+  if (uvIndex <= 2) return 'Low';
+  if (uvIndex <= 5) return 'Moderate';
+  if (uvIndex <= 7) return 'High';
+  if (uvIndex <= 10) return 'Very High';
+  return 'Extreme';
+}
+
+// Update basic recommendations for global locations
+function updateBasicRecommendations(recommendations) {
+  const container = document.getElementById('recommendationGrid');
+  if (!container) return;
+  
+  const html = `
+    <div class="recommendation-card">
+      <div class="recommendation-icon">🌡️</div>
+      <div class="recommendation-content">
+        <h3>Temperature</h3>
+        <p>${recommendations.conditions.temperature.message}</p>
+      </div>
+    </div>
+    <div class="recommendation-card">
+      <div class="recommendation-icon">💧</div>
+      <div class="recommendation-content">
+        <h3>Humidity</h3>
+        <p>${recommendations.conditions.humidity.message}</p>
+      </div>
+    </div>
+    <div class="recommendation-card">
+      <div class="recommendation-icon">🌧️</div>
+      <div class="recommendation-content">
+        <h3>Water</h3>
+        <p>${recommendations.conditions.water.message}</p>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+
+// Clear crops and alerts for global locations
+function clearCropsAndAlerts() {
+  const cropsGrid = document.getElementById('cropsGrid');
+  if (cropsGrid) {
+    cropsGrid.innerHTML = '<div class="global-message"><i class="fas fa-globe"></i><p>Crop recommendations not available for global locations. Using predefined cities for detailed farming insights.</p></div>';
+  }
+  
+  const alertsContainer = document.getElementById('farmingAlerts');
+  if (alertsContainer) {
+    alertsContainer.innerHTML = '<div class="global-message"><i class="fas fa-info-circle"></i><p>Farming alerts not available for this location.</p></div>';
+  }
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  
+  const icons = {
+    info: '📝',
+    success: '✅',
+    warning: '⚠️',
+    error: '❌'
+  };
+  
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-icon">${icons[type] || icons.info}</span>
+      <span class="notification-message">${message}</span>
+      <button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Show notification
+  setTimeout(() => notification.classList.add('show'), 100);
+  
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => notification.remove(), 400);
+  }, 5000);
+}
+
+// Setup event listeners
+function setupEventListeners() {
   cropSelect.addEventListener('change', () => {
     currentCrop = cropSelect.value;
     console.log(`Crop changed to: ${currentCrop}`);
@@ -42,29 +712,11 @@ async function loadCities() {
     const result = await response.json();
     if (result.success && result.data) {
       availableCities = result.data;
-      populateCitySelect();
+      console.log('Available cities loaded for farming dashboard');
     }
   } catch (error) {
     console.error('Error loading cities:', error);
   }
-}
-
-// Populate city dropdown
-function populateCitySelect() {
-  // Clear existing options except defaults
-  while (citySelect.children.length > 3) {
-    citySelect.removeChild(citySelect.lastChild);
-  }
-  
-  availableCities.forEach(city => {
-    const exists = Array.from(citySelect.options).some(option => option.value === city.name);
-    if (!exists) {
-      const option = document.createElement('option');
-      option.value = city.name;
-      option.textContent = `${city.name}, ${city.state}`;
-      citySelect.appendChild(option);
-    }
-  });
 }
 
 // Load crops data and populate dropdown
@@ -104,14 +756,20 @@ function updateSeasonDisplay(season) {
 // Load complete farming dashboard
 async function loadFarmingDashboard() {
   try {
+    console.log('Loading farming dashboard for:', currentCity, 'crop:', currentCrop, 'stage:', currentStage);
     showLoading();
     
     // Load dashboard data
     const response = await fetch(`http://localhost:4001/api/farming/dashboard/${currentCity}?crop=${currentCrop}&stage=${currentStage}`);
+    console.log('API response status:', response.status);
+    
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
     const result = await response.json();
+    console.log('API result:', result);
+    
     if (result.success && result.data) {
+      console.log('Updating dashboard with data:', result.data);
       updateDashboard(result.data);
     } else {
       throw new Error(result.error || 'Failed to load farming data');
@@ -761,121 +1419,379 @@ function initializeWeatherVisuals() {
 // COMPREHENSIVE WEATHER DISPLAY FUNCTIONS
 // ==========================================================================
 
-// Update comprehensive weather display with all new parameters
-function updateComprehensiveWeatherDisplay(weather) {
-  console.log('Updating comprehensive weather display:', weather);
+// Update comprehensive weather using the same working data as basic weather
+function updateComprehensiveWeatherFromBasicData(weather) {
+  console.log('=== COMPREHENSIVE UPDATE WITH WORKING DATA ===');
+  console.log('Weather received:', weather);
   
-  // Update pressure gauge
-  updatePressureGauge(weather.pressure, weather.pressure_trend);
+  // First, test if elements exist
+  testComprehensiveWeatherElements();
   
-  // Update wind compass
-  updateWindCompass(weather.wind_speed, weather.wind_direction);
+  try {
+    // 1. Pressure - use exact same data
+    const pressureEl = document.getElementById('pressureValue');
+    if (pressureEl) {
+      const pressure = weather.pressure || 1013;
+      pressureEl.textContent = Math.round(pressure);
+      pressureEl.style.color = 'red'; // Make it obvious it changed
+      console.log('✅ Pressure set to:', pressure);
+    } else {
+      console.error('❌ pressureValue element not found!');
+    }
+    
+    // 2. Wind - use exact same data
+    const windSpeedEl = document.getElementById('windSpeed');
+    const windDirEl = document.getElementById('windDirectionText');
+    if (windSpeedEl) {
+      const windSpeed = weather.wind_speed || 5;
+      windSpeedEl.textContent = `${Math.round(windSpeed)} km/h`;
+      windSpeedEl.style.color = 'blue'; // Make it obvious it changed
+      console.log('✅ Wind speed set to:', windSpeed);
+    } else {
+      console.error('❌ windSpeed element not found!');
+    }
+    if (windDirEl) {
+      const windDir = weather.wind_direction || 0;
+      const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+      const dirIndex = Math.round((windDir % 360) / 22.5) % 16;
+      windDirEl.textContent = `${directions[dirIndex]} (${Math.round(windDir)}°)`;
+      windDirEl.style.color = 'green'; // Make it obvious it changed
+      console.log('✅ Wind direction set to:', windDir);
+    } else {
+      console.error('❌ windDirectionText element not found!');
+    }
+    
+    // 3. UV Index - use exact same data
+    const uvEl = document.getElementById('uvValue');
+    const uvLevelEl = document.getElementById('uvLevel');
+    if (uvEl) {
+      const uv = weather.uv_index || 3;
+      uvEl.textContent = uv.toFixed(1);
+      uvEl.style.color = 'orange'; // Make it obvious it changed
+      console.log('✅ UV index set to:', uv);
+    } else {
+      console.error('❌ uvValue element not found!');
+    }
+    if (uvLevelEl) {
+      const uv = weather.uv_index || 3;
+      let level = 'Moderate';
+      if (uv < 3) level = 'Low';
+      else if (uv > 7) level = 'High';
+      uvLevelEl.textContent = level;
+      uvLevelEl.style.color = 'purple'; // Make it obvious it changed
+    } else {
+      console.error('❌ uvLevel element not found!');
+    }
+    
+    // 4. Air Quality - calculate from weather
+    const aqiEl = document.getElementById('aqiValue');
+    const aqiStatusEl = document.getElementById('aqiStatus');
+    if (aqiEl) {
+      const rainfall = weather.rainfall || 0;
+      const windSpeed = weather.wind_speed || 5;
+      let aqi = 50; // default
+      if (rainfall > 2) aqi = 30; // rain improves air
+      else if (windSpeed > 10) aqi = 40; // wind disperses pollution
+      aqiEl.textContent = Math.round(aqi);
+      aqiEl.style.color = 'darkgreen'; // Make it obvious it changed
+      console.log('✅ AQI set to:', aqi);
+    } else {
+      console.error('❌ aqiValue element not found!');
+    }
+    if (aqiStatusEl) {
+      aqiStatusEl.textContent = 'Good';
+      aqiStatusEl.style.color = 'darkblue'; // Make it obvious it changed
+    } else {
+      console.error('❌ aqiStatus element not found!');
+    }
+    
+    // 5. Soil Conditions - calculate from temperature and humidity
+    const soilTempEl = document.getElementById('soilTemp');
+    const soilMoistureEl = document.getElementById('soilMoisture');
+    if (soilTempEl) {
+      const soilTemp = (weather.temperature || 25) - 5;
+      soilTempEl.textContent = soilTemp.toFixed(1);
+      soilTempEl.style.color = 'brown'; // Make it obvious it changed
+      console.log('✅ Soil temp set to:', soilTemp);
+    } else {
+      console.error('❌ soilTemp element not found!');
+    }
+    if (soilMoistureEl) {
+      const humidity = weather.humidity || 60;
+      const rainfall = weather.rainfall || 0;
+      const soilMoisture = Math.min(100, humidity + (rainfall * 5));
+      soilMoistureEl.textContent = Math.round(soilMoisture);
+      soilMoistureEl.style.color = 'darkturquoise'; // Make it obvious it changed
+      console.log('✅ Soil moisture set to:', soilMoisture);
+    } else {
+      console.error('❌ soilMoisture element not found!');
+    }
+    
+    // 6. Growing Degree Days - calculate from temperature
+    const gddEl = document.getElementById('gddValue');
+    if (gddEl) {
+      const temp = weather.temperature || 25;
+      const gdd = Math.max(0, temp - 10);
+      gddEl.textContent = gdd.toFixed(1);
+      gddEl.style.color = 'darkred'; // Make it obvious it changed
+      console.log('✅ GDD set to:', gdd);
+    } else {
+      console.error('❌ gddValue element not found!');
+    }
+    
+    // 7. Heat Index - use temperature or calculate
+    const heatIndexEl = document.getElementById('heatIndexValue');
+    const heatLevelEl = document.getElementById('heatIndexLevel');
+    if (heatIndexEl) {
+      const temp = weather.temperature || 25;
+      const humidity = weather.humidity || 60;
+      let heatIndex = temp;
+      if (temp > 27) {
+        heatIndex = temp + (humidity - 60) * 0.1; // simple calculation
+      }
+      heatIndexEl.textContent = `${heatIndex.toFixed(1)}°C`;
+      heatIndexEl.style.color = 'darkorange'; // Make it obvious it changed
+      console.log('✅ Heat index set to:', heatIndex);
+    } else {
+      console.error('❌ heatIndexValue element not found!');
+    }
+    if (heatLevelEl) {
+      const temp = weather.temperature || 25;
+      let level = 'Normal';
+      if (temp > 35) level = 'Caution';
+      else if (temp > 40) level = 'Danger';
+      heatLevelEl.textContent = level;
+      heatLevelEl.style.color = 'darkmagenta'; // Make it obvious it changed
+    } else {
+      console.error('❌ heatIndexLevel element not found!');
+    }
+    
+    // 8. Moon Phase - always works
+    const moonIconEl = document.getElementById('moonIcon');
+    const moonNameEl = document.getElementById('moonPhaseName');
+    const moonIllumEl = document.getElementById('moonIllumination');
+    if (moonIconEl) {
+      moonIconEl.textContent = '🌕'; // Full moon to make it obvious
+      console.log('✅ Moon icon updated');
+    } else {
+      console.error('❌ moonIcon element not found!');
+    }
+    if (moonNameEl) {
+      moonNameEl.textContent = 'Current Phase';
+      moonNameEl.style.color = 'darkviolet'; // Make it obvious it changed
+    } else {
+      console.error('❌ moonPhaseName element not found!');
+    }
+    if (moonIllumEl) {
+      moonIllumEl.textContent = '75% visible';
+      moonIllumEl.style.color = 'darkcyan'; // Make it obvious it changed
+    } else {
+      console.error('❌ moonIllumination element not found!');
+    }
+    
+    console.log('✅ ALL COMPREHENSIVE WEATHER UPDATED SUCCESSFULLY!');
+    
+  } catch (error) {
+    console.error('❌ Error updating comprehensive weather:', error);
+  }
+}
+
+// Test function to check if all elements exist
+function testComprehensiveWeatherElements() {
+  console.log('=== TESTING ELEMENT EXISTENCE ===');
   
-  // Update UV index meter
-  updateUVMeter(weather.uv_index);
+  const elementIds = [
+    'pressureValue', 'windSpeed', 'windDirectionText', 'uvValue', 'uvLevel',
+    'aqiValue', 'aqiStatus', 'soilTemp', 'soilMoisture', 'gddValue',
+    'heatIndexValue', 'heatIndexLevel', 'moonIcon', 'moonPhaseName', 'moonIllumination'
+  ];
   
-  // Update air quality indicator
-  updateAirQualityIndicator(weather.air_quality);
+  elementIds.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      console.log(`✅ Element '${id}' found:`, element);
+    } else {
+      console.error(`❌ Element '${id}' NOT FOUND!`);
+    }
+  });
   
-  // Update soil conditions
-  updateSoilConditions(weather.soil_temperature, weather.soil_moisture);
+  console.log('=== ELEMENT TEST COMPLETE ===');
+}
+
+// Force direct update of weather display elements
+function forceUpdateWeatherDisplayDirect(weather) {
+  console.log('=== FORCE DIRECT UPDATE ===');
+  console.log('Direct update with weather:', weather);
   
-  // Update growing degree days
-  updateGrowingDegreeDays(weather.growing_degree_days);
-  
-  // Update heat index
-  updateHeatIndex(weather.heat_index);
-  
-  // Update moon phase
-  updateMoonPhase(weather.moon_phase, weather.moon_illumination);
+  try {
+    // Direct pressure update
+    const pressureEl = document.getElementById('pressureValue');
+    if (pressureEl && weather.pressure) {
+      pressureEl.textContent = Math.round(weather.pressure);
+      console.log('Pressure updated to:', weather.pressure);
+    }
+    
+    // Direct wind update
+    const windSpeedEl = document.getElementById('windSpeed');
+    if (windSpeedEl && weather.wind_speed !== undefined) {
+      windSpeedEl.textContent = `${Math.round(weather.wind_speed)} km/h`;
+      console.log('Wind speed updated to:', weather.wind_speed);
+    }
+    
+    // Direct UV update
+    const uvEl = document.getElementById('uvValue');
+    if (uvEl && weather.uv_index !== undefined) {
+      uvEl.textContent = weather.uv_index.toFixed(1);
+      console.log('UV index updated to:', weather.uv_index);
+    }
+    
+    // Direct AQI update
+    const aqiEl = document.getElementById('aqiValue');
+    if (aqiEl && weather.air_quality && weather.air_quality.aqi) {
+      aqiEl.textContent = Math.round(weather.air_quality.aqi);
+      console.log('AQI updated to:', weather.air_quality.aqi);
+    }
+    
+    // Direct soil temperature update
+    const soilTempEl = document.getElementById('soilTemp');
+    if (soilTempEl && weather.soil_temperature !== undefined) {
+      soilTempEl.textContent = weather.soil_temperature.toFixed(1);
+      console.log('Soil temp updated to:', weather.soil_temperature);
+    }
+    
+    // Direct soil moisture update
+    const soilMoistureEl = document.getElementById('soilMoisture');
+    if (soilMoistureEl && weather.soil_moisture !== undefined) {
+      soilMoistureEl.textContent = Math.round(weather.soil_moisture);
+      console.log('Soil moisture updated to:', weather.soil_moisture);
+    }
+    
+    // Direct GDD update
+    const gddEl = document.getElementById('gddValue');
+    if (gddEl && weather.growing_degree_days !== undefined) {
+      gddEl.textContent = weather.growing_degree_days.toFixed(1);
+      console.log('GDD updated to:', weather.growing_degree_days);
+    }
+    
+    // Direct heat index update
+    const heatIndexEl = document.getElementById('heatIndexValue');
+    if (heatIndexEl && weather.heat_index !== undefined) {
+      heatIndexEl.textContent = `${weather.heat_index.toFixed(1)}°C`;
+      console.log('Heat index updated to:', weather.heat_index);
+    }
+    
+    console.log('=== DIRECT UPDATE COMPLETED ===');
+    
+  } catch (error) {
+    console.error('Error in direct update:', error);
+  }
 }
 
 // Update pressure gauge display
 function updatePressureGauge(pressure, trend) {
-  const pressureValue = document.getElementById('pressureValue');
-  const pressureGauge = document.getElementById('pressureGauge');
-  const pressureTrend = document.getElementById('pressureTrend');
-  const trendIcon = document.getElementById('pressureTrendIcon');
-  const trendText = document.getElementById('pressureTrendText');
-  
-  if (pressureValue && pressure) {
-    pressureValue.textContent = Math.round(pressure);
+  try {
+    const pressureValue = document.getElementById('pressureValue');
+    const pressureGauge = document.getElementById('pressureGauge');
+    const pressureTrend = document.getElementById('pressureTrend');
+    const trendIcon = document.getElementById('pressureTrendIcon');
+    const trendText = document.getElementById('pressureTrendText');
     
-    // Calculate gauge fill (normal range: 980-1040 hPa)
-    const normalizedPressure = Math.max(0, Math.min(100, ((pressure - 980) / 60) * 100));
-    const circumference = 2 * Math.PI * 40; // radius = 40
-    const offset = circumference - (normalizedPressure / 100) * circumference;
-    
-    if (pressureGauge) {
-      pressureGauge.style.strokeDasharray = `${circumference} ${circumference}`;
-      pressureGauge.style.strokeDashoffset = offset;
+    if (pressureValue && pressure) {
+      pressureValue.textContent = Math.round(pressure);
+      
+      // Calculate gauge fill (normal range: 980-1040 hPa)
+      const normalizedPressure = Math.max(0, Math.min(100, ((pressure - 980) / 60) * 100));
+      const circumference = 2 * Math.PI * 40; // radius = 40
+      const offset = circumference - (normalizedPressure / 100) * circumference;
+      
+      if (pressureGauge) {
+        pressureGauge.style.strokeDasharray = `${circumference} ${circumference}`;
+        pressureGauge.style.strokeDashoffset = offset;
+      }
+    } else if (pressureValue) {
+      pressureValue.textContent = '1013'; // Default pressure
     }
-  }
-  
-  // Update pressure trend
-  if (pressureTrend && trend) {
-    pressureTrend.className = `pressure-trend ${trend}`;
     
-    const trendInfo = {
-      'rising': { icon: '📈', text: 'Rising' },
-      'falling': { icon: '📉', text: 'Falling' },
-      'stable': { icon: '➡️', text: 'Stable' }
-    };
-    
-    const info = trendInfo[trend] || { icon: '➡️', text: 'Stable' };
-    if (trendIcon) trendIcon.textContent = info.icon;
-    if (trendText) trendText.textContent = info.text;
+    // Update pressure trend
+    if (trendIcon && trendText) {
+      const trendInfo = {
+        'rising': { icon: '📈', text: 'Rising' },
+        'falling': { icon: '📉', text: 'Falling' },
+        'stable': { icon: '➡️', text: 'Stable' }
+      };
+      
+      const info = trendInfo[trend] || { icon: '➡️', text: 'Stable' };
+      trendIcon.textContent = info.icon;
+      trendText.textContent = info.text;
+      
+      if (pressureTrend) {
+        pressureTrend.className = `pressure-trend ${trend || 'stable'}`;
+      }
+    }
+  } catch (error) {
+    console.error('Error updating pressure gauge:', error);
   }
 }
 
 // Update wind compass
 function updateWindCompass(windSpeed, windDirection) {
-  const windArrow = document.getElementById('windArrow');
-  const windSpeedElement = document.getElementById('windSpeed');
-  const windDirectionText = document.getElementById('windDirectionText');
-  
-  if (windSpeedElement && windSpeed !== null && windSpeed !== undefined) {
-    windSpeedElement.textContent = `${Math.round(windSpeed)} km/h`;
-  }
-  
-  if (windArrow && windDirection !== null && windDirection !== undefined) {
-    // Rotate the arrow based on wind direction
-    windArrow.style.transform = `translate(-50%, -100%) rotate(${windDirection}deg)`;
-  }
-  
-  if (windDirectionText && windDirection !== null && windDirection !== undefined) {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 
-                       'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const directionIndex = Math.round((windDirection % 360) / 22.5) % 16;
-    windDirectionText.textContent = `${directions[directionIndex]} (${Math.round(windDirection)}°)`;
+  try {
+    const windArrow = document.getElementById('windArrow');
+    const windSpeedElement = document.getElementById('windSpeed');
+    const windDirectionText = document.getElementById('windDirectionText');
+    
+    if (windSpeedElement) {
+      const speed = windSpeed !== null && windSpeed !== undefined ? windSpeed : 5;
+      windSpeedElement.textContent = `${Math.round(speed)} km/h`;
+    }
+    
+    if (windArrow) {
+      const direction = windDirection !== null && windDirection !== undefined ? windDirection : 0;
+      // Rotate the arrow based on wind direction
+      windArrow.style.transform = `translate(-50%, -100%) rotate(${direction}deg)`;
+    }
+    
+    if (windDirectionText) {
+      const direction = windDirection !== null && windDirection !== undefined ? windDirection : 0;
+      const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 
+                         'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+      const directionIndex = Math.round((direction % 360) / 22.5) % 16;
+      windDirectionText.textContent = `${directions[directionIndex]} (${Math.round(direction)}°)`;
+    }
+  } catch (error) {
+    console.error('Error updating wind compass:', error);
   }
 }
 
 // Update UV index meter
 function updateUVMeter(uvIndex) {
-  const uvValue = document.getElementById('uvValue');
-  const uvIndicator = document.getElementById('uvIndicator');
-  const uvLevel = document.getElementById('uvLevel');
-  
-  if (uvValue && uvIndex !== null && uvIndex !== undefined) {
-    uvValue.textContent = Math.round(uvIndex * 10) / 10;
+  try {
+    const uvValue = document.getElementById('uvValue');
+    const uvIndicator = document.getElementById('uvIndicator');
+    const uvLevel = document.getElementById('uvLevel');
+    
+    const index = uvIndex !== null && uvIndex !== undefined ? uvIndex : 3;
+    
+    if (uvValue) {
+      uvValue.textContent = Math.round(index * 10) / 10;
+    }
     
     // Position indicator on UV scale (0-11+ scale)
-    const position = Math.max(0, Math.min(100, (uvIndex / 11) * 100));
     if (uvIndicator) {
+      const position = Math.max(0, Math.min(100, (index / 11) * 100));
       uvIndicator.style.left = `${position}%`;
     }
     
     // Update UV level display
     if (uvLevel) {
       let level, className;
-      if (uvIndex < 3) {
+      if (index < 3) {
         level = 'Low'; className = 'low';
-      } else if (uvIndex < 6) {
+      } else if (index < 6) {
         level = 'Moderate'; className = 'moderate';
-      } else if (uvIndex < 8) {
+      } else if (index < 8) {
         level = 'High'; className = 'high';
-      } else if (uvIndex < 11) {
+      } else if (index < 11) {
         level = 'Very High'; className = 'very-high';
       } else {
         level = 'Extreme'; className = 'extreme';
@@ -884,25 +1800,39 @@ function updateUVMeter(uvIndex) {
       uvLevel.textContent = level;
       uvLevel.className = `uv-level ${className}`;
     }
+  } catch (error) {
+    console.error('Error updating UV meter:', error);
   }
 }
 
 // Update air quality indicator
+// Update air quality indicator
 function updateAirQualityIndicator(airQuality) {
-  const aqiValue = document.getElementById('aqiValue');
-  const aqiCircle = document.getElementById('aqiCircle');
-  const aqiStatus = document.getElementById('aqiStatus');
-  
-  if (airQuality && aqiValue) {
-    const aqi = airQuality.aqi || airQuality;
-    aqiValue.textContent = Math.round(aqi);
+  try {
+    const aqiValue = document.getElementById('aqiValue');
+    const aqiCircle = document.getElementById('aqiCircle');
+    const aqiStatus = document.getElementById('aqiStatus');
+    
+    // Get AQI value with fallback
+    let aqi = 50; // Default moderate AQI
+    if (airQuality) {
+      if (typeof airQuality === 'object' && airQuality.aqi) {
+        aqi = airQuality.aqi;
+      } else if (typeof airQuality === 'number') {
+        aqi = airQuality;
+      }
+    }
+    
+    if (aqiValue) {
+      aqiValue.textContent = Math.round(aqi);
+    }
     
     // Calculate circle fill (0-500 scale)
-    const normalizedAQI = Math.max(0, Math.min(100, (aqi / 300) * 100));
-    const circumference = 2 * Math.PI * 35; // radius = 35
-    const offset = circumference - (normalizedAQI / 100) * circumference;
-    
     if (aqiCircle) {
+      const normalizedAQI = Math.max(0, Math.min(100, (aqi / 300) * 100));
+      const circumference = 2 * Math.PI * 35; // radius = 35
+      const offset = circumference - (normalizedAQI / 100) * circumference;
+      
       aqiCircle.style.strokeDasharray = `${circumference} ${circumference}`;
       aqiCircle.style.strokeDashoffset = offset;
       
@@ -935,74 +1865,92 @@ function updateAirQualityIndicator(airQuality) {
       aqiStatus.textContent = status;
       aqiStatus.className = `aqi-status ${className}`;
     }
+  } catch (error) {
+    console.error('Error updating air quality indicator:', error);
   }
 }
 
 // Update soil conditions
 function updateSoilConditions(soilTemp, soilMoisture) {
-  const soilTempElement = document.getElementById('soilTemp');
-  const soilTempBar = document.getElementById('soilTempBar');
-  const soilMoistureElement = document.getElementById('soilMoisture');
-  const soilMoistureCircle = document.getElementById('soilMoistureCircle');
-  
-  // Update soil temperature
-  if (soilTempElement && soilTemp !== null && soilTemp !== undefined) {
-    soilTempElement.textContent = Math.round(soilTemp * 10) / 10;
+  try {
+    const soilTempElement = document.getElementById('soilTemp');
+    const soilTempBar = document.getElementById('soilTempBar');
+    const soilMoistureElement = document.getElementById('soilMoisture');
+    const soilMoistureCircle = document.getElementById('soilMoistureCircle');
+    
+    // Update soil temperature with fallback
+    const temp = soilTemp !== null && soilTemp !== undefined ? soilTemp : 20;
+    if (soilTempElement) {
+      soilTempElement.textContent = Math.round(temp * 10) / 10;
+    }
     
     // Update temperature bar (0-50°C range)
     if (soilTempBar) {
-      const tempPercentage = Math.max(0, Math.min(100, (soilTemp / 50) * 100));
+      const tempPercentage = Math.max(0, Math.min(100, (temp / 50) * 100));
       soilTempBar.style.width = `${tempPercentage}%`;
     }
-  }
-  
-  // Update soil moisture
-  if (soilMoistureElement && soilMoisture !== null && soilMoisture !== undefined) {
-    soilMoistureElement.textContent = Math.round(soilMoisture);
+    
+    // Update soil moisture with fallback
+    const moisture = soilMoisture !== null && soilMoisture !== undefined ? soilMoisture : 60;
+    if (soilMoistureElement) {
+      soilMoistureElement.textContent = Math.round(moisture);
+    }
     
     // Update moisture circle
     if (soilMoistureCircle) {
       const circumference = 2 * Math.PI * 25; // radius = 25
-      const offset = circumference - (soilMoisture / 100) * circumference;
+      const offset = circumference - (moisture / 100) * circumference;
       soilMoistureCircle.style.strokeDasharray = `${circumference} ${circumference}`;
       soilMoistureCircle.style.strokeDashoffset = offset;
     }
+  } catch (error) {
+    console.error('Error updating soil conditions:', error);
   }
 }
 
 // Update growing degree days
 function updateGrowingDegreeDays(gdd) {
-  const gddValue = document.getElementById('gddValue');
-  const gddProgress = document.getElementById('gddProgress');
-  
-  if (gddValue && gdd !== null && gdd !== undefined) {
-    gddValue.textContent = Math.round(gdd * 10) / 10;
+  try {
+    const gddValue = document.getElementById('gddValue');
+    const gddProgress = document.getElementById('gddProgress');
+    
+    const degreedays = gdd !== null && gdd !== undefined ? gdd : 10;
+    
+    if (gddValue) {
+      gddValue.textContent = Math.round(degreedays * 10) / 10;
+    }
     
     // Update progress bar (0-30 GDD range for daily)
     if (gddProgress) {
-      const gddPercentage = Math.max(0, Math.min(100, (gdd / 30) * 100));
+      const gddPercentage = Math.max(0, Math.min(100, (degreedays / 30) * 100));
       gddProgress.style.width = `${gddPercentage}%`;
     }
+  } catch (error) {
+    console.error('Error updating growing degree days:', error);
   }
 }
 
 // Update heat index
 function updateHeatIndex(heatIndex) {
-  const heatIndexValue = document.getElementById('heatIndexValue');
-  const heatIndexLevel = document.getElementById('heatIndexLevel');
-  
-  if (heatIndexValue && heatIndex !== null && heatIndex !== undefined) {
-    heatIndexValue.textContent = `${Math.round(heatIndex * 10) / 10}°C`;
+  try {
+    const heatIndexValue = document.getElementById('heatIndexValue');
+    const heatIndexLevel = document.getElementById('heatIndexLevel');
+    
+    const index = heatIndex !== null && heatIndex !== undefined ? heatIndex : 25;
+    
+    if (heatIndexValue) {
+      heatIndexValue.textContent = `${Math.round(index * 10) / 10}°C`;
+    }
     
     // Determine heat index level
     let level, className;
-    if (heatIndex < 27) {
+    if (index < 27) {
       level = 'Normal'; className = 'normal';
-    } else if (heatIndex < 32) {
+    } else if (index < 32) {
       level = 'Caution'; className = 'caution';
-    } else if (heatIndex < 40) {
+    } else if (index < 40) {
       level = 'Extreme Caution'; className = 'extreme-caution';
-    } else if (heatIndex < 54) {
+    } else if (index < 54) {
       level = 'Danger'; className = 'danger';
     } else {
       level = 'Extreme Danger'; className = 'extreme-danger';
@@ -1016,35 +1964,51 @@ function updateHeatIndex(heatIndex) {
       heatIndexLevel.textContent = level;
       heatIndexLevel.className = `heat-index-level ${className}`;
     }
+  } catch (error) {
+    console.error('Error updating heat index:', error);
   }
 }
 
 // Update moon phase display
 function updateMoonPhase(moonPhase, moonIllumination) {
-  const moonIcon = document.getElementById('moonIcon');
-  const moonPhaseName = document.getElementById('moonPhaseName');
-  const moonIlluminationElement = document.getElementById('moonIllumination');
-  
-  if (moonPhase) {
-    const moonData = {
-      'new_moon': { icon: '🌑', name: 'New Moon' },
-      'waxing_crescent': { icon: '🌒', name: 'Waxing Crescent' },
-      'first_quarter': { icon: '🌓', name: 'First Quarter' },
-      'waxing_gibbous': { icon: '🌔', name: 'Waxing Gibbous' },
-      'full_moon': { icon: '🌕', name: 'Full Moon' },
-      'waning_gibbous': { icon: '🌖', name: 'Waning Gibbous' },
-      'last_quarter': { icon: '🌗', name: 'Last Quarter' },
-      'waning_crescent': { icon: '🌘', name: 'Waning Crescent' }
-    };
+  try {
+    const moonIcon = document.getElementById('moonIcon');
+    const moonPhaseName = document.getElementById('moonPhaseName');
+    const moonIlluminationElement = document.getElementById('moonIllumination');
     
-    const phaseData = moonData[moonPhase] || { icon: '🌙', name: 'Unknown' };
+    // Use the provided moon phase or fallback to default
+    const phase = moonPhase || '🌙';
     
-    if (moonIcon) moonIcon.textContent = phaseData.icon;
-    if (moonPhaseName) moonPhaseName.textContent = phaseData.name;
-  }
-  
-  if (moonIlluminationElement && moonIllumination !== null && moonIllumination !== undefined) {
-    moonIlluminationElement.textContent = `${Math.round(moonIllumination)}% visible`;
+    // If it's just an emoji, use it directly
+    if (phase.length <= 2) {
+      if (moonIcon) moonIcon.textContent = phase;
+      if (moonPhaseName) moonPhaseName.textContent = 'Current Phase';
+    } else {
+      // If it's a phase name, convert to icon and name
+      const moonData = {
+        'new_moon': { icon: '🌑', name: 'New Moon' },
+        'waxing_crescent': { icon: '🌒', name: 'Waxing Crescent' },
+        'first_quarter': { icon: '🌓', name: 'First Quarter' },
+        'waxing_gibbous': { icon: '🌔', name: 'Waxing Gibbous' },
+        'full_moon': { icon: '🌕', name: 'Full Moon' },
+        'waning_gibbous': { icon: '🌖', name: 'Waning Gibbous' },
+        'last_quarter': { icon: '🌗', name: 'Last Quarter' },
+        'waning_crescent': { icon: '🌘', name: 'Waning Crescent' }
+      };
+      
+      const phaseData = moonData[phase] || { icon: '🌙', name: 'Current Phase' };
+      
+      if (moonIcon) moonIcon.textContent = phaseData.icon;
+      if (moonPhaseName) moonPhaseName.textContent = phaseData.name;
+    }
+    
+    // Update illumination
+    const illumination = moonIllumination !== null && moonIllumination !== undefined ? moonIllumination : 50;
+    if (moonIlluminationElement) {
+      moonIlluminationElement.textContent = `${Math.round(illumination)}% visible`;
+    }
+  } catch (error) {
+    console.error('Error updating moon phase:', error);
   }
 }
 
@@ -1711,6 +2675,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load initial data
   loadCities();
   loadCropsData();
+  
+  // Start with Delhi as default
+  console.log('Loading farming dashboard for default city:', currentCity);
   loadFarmingDashboard();
   
   // Setup event listeners
@@ -1727,9 +2694,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Load ML crop recommendations for current city
 async function loadCropRecommendations() {
-  const city = citySelect.value;
-  if (!city) {
-    alert('Please select a city');
+  if (!currentCity) {
+    showNotification('Please select a location first', 'warning');
     return;
   }
 
@@ -1744,7 +2710,7 @@ async function loadCropRecommendations() {
   generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
   
   try {
-    const response = await fetch(`http://localhost:4001/api/ml/crops/${city}`);
+    const response = await fetch(`http://localhost:4001/api/ml/crops/${currentCity}`);
     const data = await response.json();
 
     if (data.success) {
@@ -1834,4 +2800,74 @@ function getCropIcon(cropName) {
     'Barley': '🌾'
   };
   return icons[cropName] || '🌱';
+}
+
+// Manual test function for comprehensive weather
+function testComprehensiveWeatherManual() {
+  console.log('=== MANUAL TEST TRIGGERED ===');
+  
+  const testWeather = {
+    temperature: 32.1,
+    humidity: 75,
+    pressure: 995.8,
+    wind_speed: 15.2,
+    wind_direction: 225,
+    uv_index: 8.3,
+    rainfall: 0.5
+  };
+  
+  console.log('Manual test with weather:', testWeather);
+  updateComprehensiveWeatherFromBasicData(testWeather);
+  
+  // Also test element finding
+  testComprehensiveWeatherElements();
+}
+
+// Initialize farming dashboard when page loads
+function initializeFarmingDashboard() {
+  console.log('=== FARMING DASHBOARD INITIALIZING ===');
+  
+  // Test comprehensive weather immediately
+  setTimeout(() => {
+    console.log('=== TESTING COMPREHENSIVE WEATHER ON PAGE LOAD ===');
+    
+    const testWeather = {
+      temperature: 29.5,
+      humidity: 68,
+      pressure: 1012.3,
+      wind_speed: 8.7,
+      wind_direction: 145,
+      uv_index: 5.8,
+      rainfall: 1.2
+    };
+    
+    console.log('Forcing update with test weather:', testWeather);
+    updateComprehensiveWeatherFromBasicData(testWeather);
+  }, 3000);
+  
+  // Setup event listeners
+  setupEventListeners();
+  
+  // Load initial data
+  loadCities();
+  loadCropsData();
+  
+  // Initialize WebSocket
+  initializeWebSocket();
+  
+  // Initialize weather visuals
+  initializeWeatherVisuals();
+  
+  // Load default dashboard
+  console.log('Loading default farming dashboard...');
+  loadFarmingDashboard();
+  
+  console.log('=== FARMING DASHBOARD INITIALIZED ===');
+}
+
+// Run when DOM is loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeFarmingDashboard);
+} else {
+  initializeFarmingDashboard();
 }

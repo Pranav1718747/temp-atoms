@@ -8,8 +8,9 @@ const CropRecommendationModel = require('./crop_recommendation');
 const AlertPredictor = require('./alert_predictor');
 
 class MLService {
-    constructor(climateDB) {
+    constructor(climateDB, climateAPI = null) {
         this.climateDB = climateDB;
+        this.climateAPI = climateAPI; // Add Open-Meteo API access
         this.weatherPredictor = new WeatherPredictor();
         this.cropRecommendation = new CropRecommendationModel();
         this.alertPredictor = new AlertPredictor();
@@ -45,11 +46,89 @@ class MLService {
     }
 
     /**
-     * Get weather predictions for a city
+     * Get weather predictions enhanced with Open-Meteo data
      * @param {string} cityName - Name of the city
      * @param {number} days - Number of days to predict
-     * @returns {Object} Weather predictions
+     * @param {Object} currentWeather - Current weather data from Open-Meteo
+     * @returns {Object} Enhanced weather predictions
      */
+    async getWeatherPredictionsEnhanced(cityName, days = 7, currentWeather = null) {
+        if (!this.isInitialized) {
+            throw new Error('ML Service not initialized');
+        }
+
+        try {
+            // Get historical weather data
+            let historicalData = this.climateDB.getWeatherHistory(cityName, 30);
+            
+            if (historicalData.length === 0 && currentWeather) {
+                // Create mock historical data from current weather
+                historicalData = this.createMockHistoricalData({
+                    temperature: currentWeather.main.temp,
+                    humidity: currentWeather.main.humidity,
+                    rainfall: currentWeather.rain['1h'] || 0,
+                    pressure: currentWeather.main.pressure
+                }, 7);
+            }
+
+            // Use enhanced prediction with Open-Meteo data
+            const predictions = await this.weatherPredictor.predictWeather(
+                historicalData, 
+                days, 
+                currentWeather
+            );
+            
+            // Store predictions in database
+            this.storePredictions(cityName, predictions, 'weather');
+            
+            return {
+                success: true,
+                city: cityName,
+                predictions,
+                enhanced: true,
+                basedOnDays: historicalData.length,
+                openMeteoIntegration: !!currentWeather,
+                generatedAt: new Date().toISOString()
+            };
+            
+        } catch (error) {
+            console.error(`Error getting enhanced weather predictions for ${cityName}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get environmental alert predictions enhanced with Open-Meteo data
+     * @param {string} cityName - Name of the city
+     * @param {Object} currentWeather - Current weather conditions
+     * @param {Array} forecastData - Daily forecast data
+     * @returns {Object} Enhanced alert predictions
+     */
+    async getAlertPredictionsEnhanced(cityName, currentWeather, forecastData = []) {
+        if (!this.isInitialized) {
+            throw new Error('ML Service not initialized');
+        }
+
+        try {
+            // Generate enhanced alert predictions
+            const alerts = await this.alertPredictor.predictAlerts(currentWeather, forecastData);
+            
+            // Store alerts in database
+            this.storePredictions(cityName, alerts, 'alert');
+            
+            return {
+                success: true,
+                city: cityName,
+                enhanced: true,
+                openMeteoIntegration: true,
+                ...alerts
+            };
+            
+        } catch (error) {
+            console.error(`Error getting enhanced alert predictions for ${cityName}:`, error);
+            throw error;
+        }
+    }
     async getWeatherPredictions(cityName, days = 7) {
         if (!this.isInitialized) {
             throw new Error('ML Service not initialized');

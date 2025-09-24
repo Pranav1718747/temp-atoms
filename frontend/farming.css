@@ -224,7 +224,7 @@
 
 .controls-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 1.5rem;
 }
 
@@ -238,6 +238,57 @@
   font-weight: 600;
   color: #2d5016;
   font-size: 1rem;
+}
+
+/* Location Search Styles for Farming */
+.location-search-group {
+  position: relative;
+}
+
+.location-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.farming-search {
+  width: 100%;
+  padding: 1rem 130px 1rem 3rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.farming-search:focus {
+  outline: none;
+  border-color: #7cb342;
+  box-shadow: 0 0 0 3px rgba(124, 179, 66, 0.1);
+}
+
+.farming-search-btn {
+  background: linear-gradient(45deg, #7cb342, #558b2f);
+  border: none;
+  color: white;
+  padding: 1rem 1.2rem;
+  border-radius: 0 12px 12px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.farming-search-btn:hover {
+  background: linear-gradient(45deg, #8bc34a, #689f38);
+  transform: scale(1.02);
 }
 
 .farming-select {
@@ -254,6 +305,27 @@
   border-color: #7cb342;
   outline: none;
   box-shadow: 0 0 0 3px rgba(124, 179, 66, 0.1);
+}
+
+/* Responsive styles for farming controls */
+@media (max-width: 768px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .farming-search {
+    padding: 1rem 100px 1rem 3rem;
+  }
+  
+  .farming-search-btn {
+    min-width: 90px;
+    padding: 1rem 0.8rem;
+  }
+  
+  .farming-search-btn span {
+    display: none;
+  }
 }
 
 /* Weather Summary */

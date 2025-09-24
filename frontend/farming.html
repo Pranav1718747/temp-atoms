@@ -456,21 +456,25 @@
       <div class="weather-impact-demo">
         <h3>🌦️ See How Weather Affects Growth</h3>
         <div class="impact-demo-buttons">
-          <button class="impact-demo-btn optimal" onclick="demonstrateOptimalWeather()">
-            <i class="fas fa-sun"></i>
-            Optimal Conditions
+          <button class="impact-demo-btn pressure" onclick="demonstrateAtmosphericPressure()">
+            <i class="fas fa-tachometer-alt"></i>
+            Atmospheric Pressure
           </button>
-          <button class="impact-demo-btn rain" onclick="demonstrateRainEffect()">
-            <i class="fas fa-cloud-rain"></i>
-            Heavy Rainfall
+          <button class="impact-demo-btn wind" onclick="demonstrateWindConditions()">
+            <i class="fas fa-wind"></i>
+            Wind Conditions
           </button>
-          <button class="impact-demo-btn drought" onclick="demonstrateDroughtEffect()">
-            <i class="fas fa-fire"></i>
-            Drought Stress
+          <button class="impact-demo-btn air-quality" onclick="demonstrateAirQuality()">
+            <i class="fas fa-smog"></i>
+            Air Quality
           </button>
-          <button class="impact-demo-btn cold" onclick="demonstrateColdEffect()">
-            <i class="fas fa-snowflake"></i>
-            Cold Stress
+          <button class="impact-demo-btn soil" onclick="demonstrateSoilCondition()">
+            <i class="fas fa-seedling"></i>
+            Soil Conditions
+          </button>
+          <button class="impact-demo-btn heat" onclick="demonstrateHeatIndex()">
+            <i class="fas fa-thermometer-full"></i>
+            Heat Index
           </button>
         </div>
       </div>
@@ -601,49 +605,139 @@
       }
     }
     
-    // Weather effect demonstration functions
-    function demonstrateOptimalWeather() {
+    // Enhanced atmospheric effect demonstration functions
+    function demonstrateAtmosphericPressure() {
       if (!cropAnimator) {
         toggleCropAnimation();
-        setTimeout(() => demonstrateOptimalWeather(), 1000);
+        setTimeout(() => demonstrateAtmosphericPressure(), 1000);
         return;
       }
       
-      cropAnimator.simulateWeather('optimal');
-      showNotification('🌞 Demonstrating optimal weather conditions for crop growth', 'success', 3000);
+      // Alternate between high and low pressure
+      const currentPressure = cropAnimator.weatherConditions.pressure || 1013;
+      if (currentPressure > 1020) {
+        cropAnimator.updateWeatherConditions({ 
+          pressure: 985,
+          windSpeed: cropAnimator.weatherConditions.windSpeed + 8,
+          humidity: cropAnimator.weatherConditions.humidity + 15
+        });
+        showNotification('🌀 Low pressure system: Storm conditions, enhanced transpiration', 'warning', 4000);
+      } else {
+        cropAnimator.updateWeatherConditions({ 
+          pressure: 1035,
+          windSpeed: Math.max(1, cropAnimator.weatherConditions.windSpeed - 5),
+          humidity: Math.max(30, cropAnimator.weatherConditions.humidity - 10)
+        });
+        showNotification('☁️ High pressure system: Clear skies, reduced plant transpiration', 'info', 4000);
+      }
     }
     
-    function demonstrateRainEffect() {
+    function demonstrateWindConditions() {
       if (!cropAnimator) {
         toggleCropAnimation();
-        setTimeout(() => demonstrateRainEffect(), 1000);
+        setTimeout(() => demonstrateWindConditions(), 1000);
         return;
       }
       
-      cropAnimator.simulateWeather('rain');
-      showNotification('🌧️ Demonstrating heavy rainfall effect on crops', 'info', 3000);
+      const currentWind = cropAnimator.weatherConditions.windSpeed || 5;
+      if (currentWind > 20) {
+        cropAnimator.updateWeatherConditions({ 
+          windSpeed: 3,
+          humidity: cropAnimator.weatherConditions.humidity + 8
+        });
+        showNotification('🍃 Calm conditions: Poor air circulation, higher disease risk', 'warning', 4000);
+      } else {
+        cropAnimator.updateWeatherConditions({ 
+          windSpeed: 28,
+          humidity: Math.max(25, cropAnimator.weatherConditions.humidity - 12),
+          temperature: cropAnimator.weatherConditions.temperature - 2
+        });
+        showNotification('🌪️ Strong winds: Mechanical damage, excessive water loss', 'error', 4000);
+      }
     }
     
-    function demonstrateDroughtEffect() {
+    function demonstrateAirQuality() {
       if (!cropAnimator) {
         toggleCropAnimation();
-        setTimeout(() => demonstrateDroughtEffect(), 1000);
+        setTimeout(() => demonstrateAirQuality(), 1000);
         return;
       }
       
-      cropAnimator.simulateWeather('drought');
-      showNotification('🔥 Demonstrating drought stress on crop growth', 'warning', 3000);
+      const currentAQI = cropAnimator.weatherConditions.airQuality || 50;
+      if (currentAQI > 100) {
+        cropAnimator.updateWeatherConditions({ 
+          airQuality: 35,
+          uvIndex: (cropAnimator.weatherConditions.uvIndex || 5) + 1
+        });
+        showNotification('🌿 Excellent air quality: Clear atmosphere, optimal photosynthesis', 'success', 4000);
+      } else {
+        cropAnimator.updateWeatherConditions({ 
+          airQuality: 175,
+          uvIndex: Math.max(1, (cropAnimator.weatherConditions.uvIndex || 5) - 2),
+          temperature: cropAnimator.weatherConditions.temperature + 2
+        });
+        showNotification('😷 Poor air quality: Reduced photosynthesis, leaf damage from pollutants', 'error', 5000);
+      }
     }
     
-    function demonstrateColdEffect() {
+    function demonstrateSoilCondition() {
       if (!cropAnimator) {
         toggleCropAnimation();
-        setTimeout(() => demonstrateColdEffect(), 1000);
+        setTimeout(() => demonstrateSoilCondition(), 1000);
         return;
       }
       
-      cropAnimator.simulateWeather('cold');
-      showNotification('❄️ Demonstrating cold stress effect on crops', 'warning', 3000);
+      const currentSoil = cropAnimator.weatherConditions.soilMoisture || 50;
+      if (currentSoil < 40) {
+        cropAnimator.updateWeatherConditions({ 
+          soilMoisture: 88,
+          soilTemperature: cropAnimator.weatherConditions.temperature - 4,
+          rainfall: 12
+        });
+        showNotification('💧 Waterlogged soil: Poor root aeration, fungal disease risk', 'error', 4000);
+      } else if (currentSoil > 75) {
+        cropAnimator.updateWeatherConditions({ 
+          soilMoisture: 22,
+          soilTemperature: cropAnimator.weatherConditions.temperature + 6,
+          rainfall: 0
+        });
+        showNotification('🌵 Dry soil: Water stress, reduced nutrient uptake', 'error', 4000);
+      } else {
+        cropAnimator.updateWeatherConditions({ 
+          soilMoisture: 62,
+          soilTemperature: cropAnimator.weatherConditions.temperature - 1,
+          rainfall: 4
+        });
+        showNotification('🌱 Optimal soil moisture: Perfect conditions for root development', 'success', 3000);
+      }
+    }
+    
+    function demonstrateHeatIndex() {
+      if (!cropAnimator) {
+        toggleCropAnimation();
+        setTimeout(() => demonstrateHeatIndex(), 1000);
+        return;
+      }
+      
+      const currentTemp = cropAnimator.weatherConditions.temperature || 25;
+      const currentHumidity = cropAnimator.weatherConditions.humidity || 60;
+      const currentHeatIndex = cropAnimator.calculateHeatIndex(currentTemp, currentHumidity);
+      
+      if (currentHeatIndex > 35) {
+        cropAnimator.updateWeatherConditions({ 
+          temperature: 24,
+          humidity: 55,
+          heatIndex: 26
+        });
+        showNotification('❄️ Low heat index: Comfortable growing conditions, optimal metabolism', 'success', 3000);
+      } else {
+        cropAnimator.updateWeatherConditions({ 
+          temperature: 39,
+          humidity: 68,
+          heatIndex: 48
+        });
+        showNotification('👥 Extreme heat index: Severe plant stress, cellular damage risk', 'error', 5000);
+      }
     }
     
     // Auto-update animation when weather data changes

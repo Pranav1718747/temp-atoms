@@ -12,7 +12,11 @@ class CropGrowthAnimator {
       rainfall: 0,
       windSpeed: 5,
       uvIndex: 3,
-      soilMoisture: 50
+      soilMoisture: 50,
+      pressure: 1013,
+      airQuality: 50,
+      soilTemperature: 23,
+      heatIndex: 25
     };
     
     this.growthStages = ['seed', 'germination', 'seedling', 'vegetative', 'flowering', 'fruiting'];
@@ -497,7 +501,73 @@ class CropGrowthAnimator {
       rate *= 0.7; // Waterlogging stress
     }
     
-    return Math.max(rate, 0.1); // Minimum growth rate
+    // NEW: Atmospheric pressure impact
+    const pressure = this.weatherConditions.pressure || 1013;
+    if (pressure < 1000) {
+      rate *= 0.85; // Low pressure reduces growth efficiency
+    } else if (pressure > 1030) {
+      rate *= 0.9; // High pressure slightly reduces growth
+    }
+    
+    // NEW: Wind speed impact
+    const windSpeed = this.weatherConditions.windSpeed || 5;
+    if (windSpeed < 3) {
+      rate *= 0.9; // Too calm - reduced gas exchange
+    } else if (windSpeed > 20) {
+      rate *= 0.4; // Strong winds cause mechanical stress
+    } else if (windSpeed >= 8 && windSpeed <= 15) {
+      rate *= 1.1; // Optimal wind for gas exchange
+    }
+    
+    // NEW: Air quality impact
+    const aqi = this.weatherConditions.airQuality || 50;
+    if (aqi > 150) {
+      rate *= 0.3; // Poor air quality severely impacts photosynthesis
+    } else if (aqi > 100) {
+      rate *= 0.7; // Moderate air quality reduces efficiency
+    } else if (aqi < 50) {
+      rate *= 1.05; // Clean air enhances photosynthesis
+    }
+    
+    // NEW: Soil conditions impact
+    const soilMoisture = this.weatherConditions.soilMoisture || 50;
+    if (soilMoisture < 30) {
+      rate *= 0.4; // Dry soil severely limits growth
+    } else if (soilMoisture > 80) {
+      rate *= 0.5; // Waterlogged soil causes root problems
+    } else if (soilMoisture >= 50 && soilMoisture <= 70) {
+      rate *= 1.1; // Optimal soil moisture
+    }
+    
+    // NEW: Heat index impact (combines temperature and humidity)
+    const heatIndex = this.weatherConditions.heatIndex || this.calculateHeatIndex(
+      this.weatherConditions.temperature, this.weatherConditions.humidity
+    );
+    if (heatIndex > 40) {
+      rate *= 0.2; // Extreme heat index causes severe stress
+    } else if (heatIndex > 35) {
+      rate *= 0.6; // High heat index reduces growth
+    } else if (heatIndex < 20) {
+      rate *= 0.8; // Low heat index slows metabolism
+    }
+    
+    return Math.max(rate, 0.05); // Minimum growth rate (plants don't die completely)
+  }
+  
+  calculateHeatIndex(temp, humidity) {
+    // Simplified heat index calculation
+    if (temp < 27) return temp;
+    
+    const T = temp;
+    const RH = humidity;
+    
+    let HI = 0.5 * (T + 61.0 + ((T - 68.0) * 1.2) + (RH * 0.094));
+    
+    if (HI >= 80) {
+      HI = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH;
+    }
+    
+    return Math.round(HI);
   }
   
   advanceStage() {
@@ -533,20 +603,49 @@ class CropGrowthAnimator {
     if (!plant) return;
     
     // Remove stress classes
-    plant.classList.remove('temperature-stress', 'drought-stress', 'waterlogged', 'cold-stress', 'optimal-growth');
+    plant.classList.remove('temperature-stress', 'drought-stress', 'waterlogged', 'cold-stress', 
+                           'optimal-growth', 'pressure-stress', 'wind-stress', 'air-quality-stress', 
+                           'heat-index-stress', 'soil-stress');
     
-    // Apply stress effects based on weather
     const cropConfig = this.cropConfigs[this.currentCrop];
     
-    if (this.weatherConditions.temperature > cropConfig.optimalTemp.max + 5) {
+    // Heat index stress (combines temperature and humidity effects)
+    const heatIndex = this.weatherConditions.heatIndex || this.calculateHeatIndex(
+      this.weatherConditions.temperature, this.weatherConditions.humidity
+    );
+    
+    if (heatIndex > 40) {
+      plant.classList.add('heat-index-stress');
+    } else if (this.weatherConditions.temperature > cropConfig.optimalTemp.max + 5) {
       plant.classList.add('temperature-stress');
     } else if (this.weatherConditions.temperature < cropConfig.optimalTemp.min - 5) {
       plant.classList.add('cold-stress');
-    } else if (this.weatherConditions.rainfall < cropConfig.optimalRainfall.min - 1) {
+    }
+    
+    // Soil moisture stress
+    else if (this.weatherConditions.soilMoisture < 30) {
       plant.classList.add('drought-stress');
-    } else if (this.weatherConditions.rainfall > cropConfig.optimalRainfall.max + 3) {
+    } else if (this.weatherConditions.soilMoisture > 80) {
       plant.classList.add('waterlogged');
-    } else if (this.isOptimalConditions()) {
+    }
+    
+    // Air quality stress
+    else if (this.weatherConditions.airQuality > 150) {
+      plant.classList.add('air-quality-stress');
+    }
+    
+    // Wind stress
+    else if (this.weatherConditions.windSpeed > 25) {
+      plant.classList.add('wind-stress');
+    }
+    
+    // Atmospheric pressure stress
+    else if (this.weatherConditions.pressure < 990) {
+      plant.classList.add('pressure-stress');
+    }
+    
+    // Check for optimal conditions
+    else if (this.isOptimalConditions()) {
       plant.classList.add('optimal-growth');
     }
     

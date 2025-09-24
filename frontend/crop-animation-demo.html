@@ -97,10 +97,50 @@
       box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
     }
     
-    .impact-btn.temperature { background: linear-gradient(45deg, #FF5722, #F44336); }
-    .impact-btn.humidity { background: linear-gradient(45deg, #2196F3, #1976D2); }
-    .impact-btn.rainfall { background: linear-gradient(45deg, #9C27B0, #673AB7); }
-    .impact-btn.wind { background: linear-gradient(45deg, #607D8B, #455A64); }
+    .impact-btn.pressure {
+      background: linear-gradient(45deg, #FF5722, #F44336);
+      box-shadow: 0 4px 15px rgba(255, 87, 34, 0.3);
+    }
+    
+    .impact-btn.pressure:hover {
+      box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+    }
+    
+    .impact-btn.wind {
+      background: linear-gradient(45deg, #2196F3, #1976D2);
+      box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+    }
+    
+    .impact-btn.wind:hover {
+      box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+    }
+    
+    .impact-btn.air-quality {
+      background: linear-gradient(45deg, #9C27B0, #673AB7);
+      box-shadow: 0 4px 15px rgba(156, 39, 176, 0.3);
+    }
+    
+    .impact-btn.air-quality:hover {
+      box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
+    }
+    
+    .impact-btn.soil {
+      background: linear-gradient(45deg, #607D8B, #455A64);
+      box-shadow: 0 4px 15px rgba(96, 125, 139, 0.3);
+    }
+    
+    .impact-btn.soil:hover {
+      box-shadow: 0 6px 20px rgba(96, 125, 139, 0.4);
+    }
+    
+    .impact-btn.heat {
+      background: linear-gradient(45deg, #FF9800, #F57C00);
+      box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3);
+    }
+    
+    .impact-btn.heat:hover {
+      box-shadow: 0 6px 20px rgba(255, 152, 0, 0.4);
+    }
     
     .weather-simulation-panel {
       background: linear-gradient(145deg, #fff, #f8f9fa);
@@ -291,71 +331,88 @@
     
     <!-- Weather Impact Information Grid -->
     <div class="weather-impact-grid">
-      <!-- Temperature Impact -->
+      <!-- Atmospheric Pressure Impact -->
       <div class="impact-card">
         <h3 class="impact-title">
-          <i class="fas fa-thermometer-half" style="color: #FF5722;"></i>
-          Temperature Impact
+          <i class="fas fa-tachometer-alt" style="color: #FF5722;"></i>
+          Atmospheric Pressure Impact
         </h3>
         <p class="impact-description">
-          Temperature directly affects metabolic processes, enzyme activity, and photosynthesis rate. 
-          Optimal temperatures promote healthy growth, while extremes cause stress.
+          Atmospheric pressure affects plant cell expansion, water uptake, and gas exchange. 
+          High pressure can restrict growth, while low pressure may enhance transpiration rates.
         </p>
         <div class="impact-controls">
-          <button class="impact-btn temperature" onclick="simulateTemperatureEffect('cold')">Cold Stress</button>
-          <button class="impact-btn temperature" onclick="simulateTemperatureEffect('optimal')">Optimal</button>
-          <button class="impact-btn temperature" onclick="simulateTemperatureEffect('hot')">Heat Stress</button>
+          <button class="impact-btn pressure" onclick="simulateAtmosphericPressure('low')">Low Pressure (<1000 hPa)</button>
+          <button class="impact-btn pressure" onclick="simulateAtmosphericPressure('normal')">Normal (1013 hPa)</button>
+          <button class="impact-btn pressure" onclick="simulateAtmosphericPressure('high')">High Pressure (>1030 hPa)</button>
         </div>
       </div>
       
-      <!-- Humidity Impact -->
+      <!-- Wind Conditions Impact -->
       <div class="impact-card">
         <h3 class="impact-title">
-          <i class="fas fa-tint" style="color: #2196F3;"></i>
-          Humidity Impact
+          <i class="fas fa-wind" style="color: #2196F3;"></i>
+          Wind Conditions Impact
         </h3>
         <p class="impact-description">
-          Humidity affects transpiration rates, water uptake, and disease susceptibility. 
-          Proper humidity levels ensure efficient water transport and nutrient absorption.
+          Wind affects transpiration rates, pollination success, mechanical stress, and disease spread. 
+          Optimal wind promotes gas exchange while excessive wind causes physical damage.
         </p>
         <div class="impact-controls">
-          <button class="impact-btn humidity" onclick="simulateHumidityEffect('low')">Low Humidity</button>
-          <button class="impact-btn humidity" onclick="simulateHumidityEffect('optimal')">Optimal</button>
-          <button class="impact-btn humidity" onclick="simulateHumidityEffect('high')">High Humidity</button>
+          <button class="impact-btn wind" onclick="simulateWindConditions('calm')">Calm (<5 km/h)</button>
+          <button class="impact-btn wind" onclick="simulateWindConditions('moderate')">Moderate (10-15 km/h)</button>
+          <button class="impact-btn wind" onclick="simulateWindConditions('strong')">Strong (>25 km/h)</button>
         </div>
       </div>
       
-      <!-- Rainfall Impact -->
+      <!-- Air Quality Impact -->
       <div class="impact-card">
         <h3 class="impact-title">
-          <i class="fas fa-cloud-rain" style="color: #9C27B0;"></i>
-          Water Availability
+          <i class="fas fa-smog" style="color: #9C27B0;"></i>
+          Air Quality Impact
         </h3>
         <p class="impact-description">
-          Water availability affects root development, nutrient transport, and cell expansion. 
-          Balanced water supply is crucial for healthy plant development.
+          Air quality affects photosynthesis efficiency, leaf health, and overall plant vigor. 
+          Poor air quality reduces light penetration and damages leaf surfaces.
         </p>
         <div class="impact-controls">
-          <button class="impact-btn rainfall" onclick="simulateWaterEffect('drought')">Drought</button>
-          <button class="impact-btn rainfall" onclick="simulateWaterEffect('optimal')">Adequate</button>
-          <button class="impact-btn rainfall" onclick="simulateWaterEffect('excess')">Waterlogged</button>
+          <button class="impact-btn air-quality" onclick="simulateAirQuality('good')">Good (AQI <50)</button>
+          <button class="impact-btn air-quality" onclick="simulateAirQuality('moderate')">Moderate (AQI 50-100)</button>
+          <button class="impact-btn air-quality" onclick="simulateAirQuality('poor')">Poor (AQI >150)</button>
         </div>
       </div>
       
-      <!-- Wind Impact -->
+      <!-- Soil Conditions Impact -->
       <div class="impact-card">
         <h3 class="impact-title">
-          <i class="fas fa-wind" style="color: #607D8B;"></i>
-          Wind & Air Movement
+          <i class="fas fa-seedling" style="color: #607D8B;"></i>
+          Soil Conditions Impact
         </h3>
         <p class="impact-description">
-          Wind affects transpiration, pollination, and mechanical stress. 
-          Gentle air movement aids gas exchange, while strong winds can cause physical damage.
+          Soil moisture and temperature directly affect root development, nutrient uptake, and microbial activity. 
+          Optimal soil conditions are crucial for healthy plant establishment.
         </p>
         <div class="impact-controls">
-          <button class="impact-btn wind" onclick="simulateWindEffect('calm')">Calm</button>
-          <button class="impact-btn wind" onclick="simulateWindEffect('gentle')">Gentle Breeze</button>
-          <button class="impact-btn wind" onclick="simulateWindEffect('strong')">Strong Wind</button>
+          <button class="impact-btn soil" onclick="simulateSoilCondition('dry')">Dry Soil (<30%)</button>
+          <button class="impact-btn soil" onclick="simulateSoilCondition('optimal')">Optimal (50-70%)</button>
+          <button class="impact-btn soil" onclick="simulateSoilCondition('waterlogged')">Waterlogged (>80%)</button>
+        </div>
+      </div>
+      
+      <!-- Heat Index Impact -->
+      <div class="impact-card">
+        <h3 class="impact-title">
+          <i class="fas fa-thermometer-full" style="color: #FF9800;"></i>
+          Heat Index Impact
+        </h3>
+        <p class="impact-description">
+          Heat index combines temperature and humidity to measure plant stress. 
+          High heat index causes wilting, reduced photosynthesis, and cellular damage.
+        </p>
+        <div class="impact-controls">
+          <button class="impact-btn heat" onclick="simulateHeatIndex('low')">Low (<27°C)</button>
+          <button class="impact-btn heat" onclick="simulateHeatIndex('moderate')">Moderate (27-32°C)</button>
+          <button class="impact-btn heat" onclick="simulateHeatIndex('extreme')">Extreme (>40°C)</button>
         </div>
       </div>
     </div>
@@ -433,80 +490,158 @@
   <!-- Scripts -->
   <script src="crop-growth-animator.js"></script>
   <script>
-    // Weather simulation functions
-    function simulateTemperatureEffect(type) {
-      if (!cropAnimator) return;
-      
-      switch(type) {
-        case 'cold':
-          cropAnimator.updateWeatherConditions({ temperature: 8 });
-          break;
-        case 'optimal':
-          const config = cropAnimator.cropConfigs[cropAnimator.currentCrop];
-          cropAnimator.updateWeatherConditions({ 
-            temperature: (config.optimalTemp.min + config.optimalTemp.max) / 2 
-          });
-          break;
-        case 'hot':
-          cropAnimator.updateWeatherConditions({ temperature: 38 });
-          break;
-      }
-      updateSliderFromWeather();
-    }
-    
-    function simulateHumidityEffect(type) {
+    // Advanced atmospheric condition simulation functions
+    function simulateAtmosphericPressure(type) {
       if (!cropAnimator) return;
       
       switch(type) {
         case 'low':
-          cropAnimator.updateWeatherConditions({ humidity: 25 });
-          break;
-        case 'optimal':
-          const config = cropAnimator.cropConfigs[cropAnimator.currentCrop];
           cropAnimator.updateWeatherConditions({ 
-            humidity: (config.optimalHumidity.min + config.optimalHumidity.max) / 2 
+            pressure: 980,
+            temperature: cropAnimator.weatherConditions.temperature + 2, // Low pressure often brings warmer air
+            humidity: cropAnimator.weatherConditions.humidity + 10,
+            windSpeed: cropAnimator.weatherConditions.windSpeed + 5
           });
+          showNotification('🌀 Low pressure system: Enhanced transpiration, potential storm conditions', 'warning', 4000);
+          break;
+        case 'normal':
+          cropAnimator.updateWeatherConditions({ pressure: 1013 });
+          showNotification('⚖️ Normal atmospheric pressure: Stable plant growth conditions', 'info', 3000);
           break;
         case 'high':
-          cropAnimator.updateWeatherConditions({ humidity: 95 });
-          break;
-      }
-      updateSliderFromWeather();
-    }
-    
-    function simulateWaterEffect(type) {
-      if (!cropAnimator) return;
-      
-      switch(type) {
-        case 'drought':
-          cropAnimator.updateWeatherConditions({ rainfall: 0, soilMoisture: 15 });
-          break;
-        case 'optimal':
-          const config = cropAnimator.cropConfigs[cropAnimator.currentCrop];
           cropAnimator.updateWeatherConditions({ 
-            rainfall: (config.optimalRainfall.min + config.optimalRainfall.max) / 2,
-            soilMoisture: 60
+            pressure: 1035,
+            temperature: cropAnimator.weatherConditions.temperature - 1, // High pressure often cooler
+            humidity: cropAnimator.weatherConditions.humidity - 5,
+            windSpeed: Math.max(1, cropAnimator.weatherConditions.windSpeed - 3)
           });
-          break;
-        case 'excess':
-          cropAnimator.updateWeatherConditions({ rainfall: 12, soilMoisture: 90 });
+          showNotification('☁️ High pressure system: Reduced transpiration, stable but slower growth', 'info', 4000);
           break;
       }
       updateSliderFromWeather();
     }
     
-    function simulateWindEffect(type) {
+    function simulateWindConditions(type) {
       if (!cropAnimator) return;
       
       switch(type) {
         case 'calm':
-          cropAnimator.updateWeatherConditions({ windSpeed: 1 });
+          cropAnimator.updateWeatherConditions({ 
+            windSpeed: 2,
+            humidity: cropAnimator.weatherConditions.humidity + 5 // Less evaporation
+          });
+          showNotification('🍃 Calm conditions: Reduced gas exchange, higher humidity around plants', 'info', 4000);
           break;
-        case 'gentle':
-          cropAnimator.updateWeatherConditions({ windSpeed: 8 });
+        case 'moderate':
+          cropAnimator.updateWeatherConditions({ 
+            windSpeed: 12,
+            humidity: Math.max(30, cropAnimator.weatherConditions.humidity - 3)
+          });
+          showNotification('🌬️ Moderate wind: Optimal transpiration and gas exchange', 'success', 3000);
           break;
         case 'strong':
-          cropAnimator.updateWeatherConditions({ windSpeed: 25 });
+          cropAnimator.updateWeatherConditions({ 
+            windSpeed: 28,
+            humidity: Math.max(25, cropAnimator.weatherConditions.humidity - 10),
+            temperature: cropAnimator.weatherConditions.temperature - 2 // Wind chill effect
+          });
+          showNotification('🌪️ Strong winds: Mechanical stress, excessive water loss, potential damage', 'error', 4000);
+          break;
+      }
+      updateSliderFromWeather();
+    }
+    
+    function simulateAirQuality(type) {
+      if (!cropAnimator) return;
+      
+      switch(type) {
+        case 'good':
+          cropAnimator.updateWeatherConditions({ 
+            airQuality: 35,
+            uv_index: cropAnimator.weatherConditions.uv_index || 5 // Clear air, more UV
+          });
+          showNotification('🌿 Excellent air quality: Optimal photosynthesis and plant health', 'success', 4000);
+          break;
+        case 'moderate':
+          cropAnimator.updateWeatherConditions({ 
+            airQuality: 75,
+            uv_index: Math.max(2, (cropAnimator.weatherConditions.uv_index || 5) - 1)
+          });
+          showNotification('🌫️ Moderate air quality: Slight reduction in photosynthesis efficiency', 'warning', 4000);
+          break;
+        case 'poor':
+          cropAnimator.updateWeatherConditions({ 
+            airQuality: 180,
+            uv_index: Math.max(1, (cropAnimator.weatherConditions.uv_index || 5) - 3), // Smog blocks UV
+            temperature: cropAnimator.weatherConditions.temperature + 1 // Heat island effect
+          });
+          showNotification('😷 Poor air quality: Reduced photosynthesis, leaf damage, stunted growth', 'error', 5000);
+          break;
+      }
+      updateSliderFromWeather();
+    }
+    
+    function simulateSoilCondition(type) {
+      if (!cropAnimator) return;
+      
+      switch(type) {
+        case 'dry':
+          cropAnimator.updateWeatherConditions({ 
+            soilMoisture: 25,
+            soilTemperature: cropAnimator.weatherConditions.temperature + 5, // Dry soil heats up more
+            rainfall: 0
+          });
+          showNotification('🌵 Dry soil conditions: Water stress, reduced nutrient uptake, wilting', 'error', 4000);
+          break;
+        case 'optimal':
+          cropAnimator.updateWeatherConditions({ 
+            soilMoisture: 60,
+            soilTemperature: cropAnimator.weatherConditions.temperature - 2, // Moist soil moderates temperature
+            rainfall: 3
+          });
+          showNotification('🌱 Optimal soil conditions: Perfect water and nutrient availability', 'success', 3000);
+          break;
+        case 'waterlogged':
+          cropAnimator.updateWeatherConditions({ 
+            soilMoisture: 85,
+            soilTemperature: cropAnimator.weatherConditions.temperature - 3, // Waterlogged soil is cooler
+            rainfall: 10,
+            airQuality: (cropAnimator.weatherConditions.airQuality || 50) + 10 // Stagnant conditions
+          });
+          showNotification('💧 Waterlogged soil: Root rot risk, poor aeration, fungal diseases', 'error', 5000);
+          break;
+      }
+      updateSliderFromWeather();
+    }
+    
+    function simulateHeatIndex(type) {
+      if (!cropAnimator) return;
+      
+      switch(type) {
+        case 'low':
+          cropAnimator.updateWeatherConditions({ 
+            temperature: 22,
+            humidity: 55,
+            heatIndex: 24
+          });
+          showNotification('❄️ Low heat index: Comfortable conditions, optimal metabolic rates', 'success', 3000);
+          break;
+        case 'moderate':
+          cropAnimator.updateWeatherConditions({ 
+            temperature: 29,
+            humidity: 70,
+            heatIndex: 35
+          });
+          showNotification('🌤️ Moderate heat index: Increased transpiration, slight stress', 'warning', 4000);
+          break;
+        case 'extreme':
+          cropAnimator.updateWeatherConditions({ 
+            temperature: 38,
+            humidity: 65,
+            heatIndex: 45,
+            windSpeed: Math.max(1, cropAnimator.weatherConditions.windSpeed - 2) // Hot air rises, less surface wind
+          });
+          showNotification('👥 Extreme heat index: Severe plant stress, cellular damage, wilting', 'error', 5000);
           break;
       }
       updateSliderFromWeather();

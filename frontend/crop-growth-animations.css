@@ -242,6 +242,32 @@
   animation: healthyGlow 1.5s ease-in-out infinite;
 }
 
+/* NEW: Additional atmospheric stress effects */
+.crop-plant.heat-index-stress .plant-leaves {
+  fill: #FF4500; /* Orange-red for extreme heat stress */
+  animation: heatStress 1s ease-in-out infinite;
+}
+
+.crop-plant.air-quality-stress .plant-leaves {
+  fill: #696969; /* Gray for air pollution damage */
+  animation: pollutionStress 2s ease-in-out infinite;
+}
+
+.crop-plant.wind-stress .plant-leaves {
+  fill: #8B4513; /* Brown for wind damage */
+  animation: windDamage 0.5s ease-in-out infinite;
+}
+
+.crop-plant.pressure-stress .plant-leaves {
+  fill: #9370DB; /* Purple for pressure stress */
+  animation: pressureStress 3s ease-in-out infinite;
+}
+
+.crop-plant.soil-stress .plant-leaves {
+  fill: #CD853F; /* Tan for soil problems */
+  animation: soilStress 2s ease-in-out infinite;
+}
+
 /* Soil and Root Zone */
 .soil-layer {
   position: absolute;
@@ -447,6 +473,34 @@
 @keyframes healthyGlow {
   0%, 100% { filter: drop-shadow(0 0 5px #00FF00); }
   50% { filter: drop-shadow(0 0 15px #32CD32); }
+}
+
+/* NEW: Additional stress animation keyframes */
+@keyframes heatStress {
+  0%, 100% { transform: rotate(0deg) scale(1); filter: brightness(1); }
+  25% { transform: rotate(-2deg) scale(0.95); filter: brightness(0.8); }
+  75% { transform: rotate(2deg) scale(0.95); filter: brightness(0.8); }
+}
+
+@keyframes pollutionStress {
+  0%, 100% { opacity: 1; filter: blur(0px); }
+  50% { opacity: 0.7; filter: blur(1px); }
+}
+
+@keyframes windDamage {
+  0%, 100% { transform: rotate(0deg) translateX(0px); }
+  25% { transform: rotate(-8deg) translateX(-3px); }
+  75% { transform: rotate(8deg) translateX(3px); }
+}
+
+@keyframes pressureStress {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.9); }
+}
+
+@keyframes soilStress {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(2px); }
 }
 
 /* Responsive Design */

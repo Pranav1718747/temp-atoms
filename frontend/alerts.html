@@ -67,29 +67,36 @@
 
     <!-- Main Content -->
     <main class="alert-section">
+
+
         <!-- Location Search Section -->
         <section class="location-search-section">
-            <div class="search-container">
-                <h2><i class="fas fa-map-marker-alt"></i> <span data-i18n="selectYourLocation">Select Your Location</span></h2>
+            <div class="location-search-container">
+                <div class="search-header">
+                    <h3><i class="fas fa-map-marker-alt"></i> <span data-i18n="selectLocation">Select Location</span></h3>
+                    <p data-i18n="chooseLocationForEnvironmentalData">Choose a location to view environmental data</p>
+                </div>
                 <div class="search-controls">
-                    <div class="location-search-wrapper">
-                        <div class="search-input-container">
-                            <i class="fas fa-search search-icon"></i>
-                            <input type="text" id="locationSearch" class="location-search" data-i18n="searchPlaceholder" placeholder="Search small towns, villages, or any location..." autocomplete="off">
-                            <button id="searchBtn" class="search-btn" onclick="searchLocation()">
-                                <i class="fas fa-globe"></i>
-                                <span data-i18n="search">Search</span>
-                            </button>
-                        </div>
-                        <div id="searchResults" class="search-results" style="display: none;"></div>
+                    <div class="search-input-wrapper">
+                        <input type="text" id="locationSearchAlerts" placeholder="Search villages, towns, cities..." class="location-search-input">
+                        <button onclick="searchLocationAlerts()" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
-                    <div class="current-location-info">
-                        <div class="location-display">
-                            <span class="location-icon">📍</span>
-                            <span class="location-name" id="currentLocationName" data-i18n="selectLocation">Select a location</span>
-                            <span class="location-type" id="currentLocationType"></span>
-                        </div>
+                    <select id="citySelectAlerts" class="city-select" onchange="selectLocationAlerts()">
+                        <option value="">🏡 Select a location</option>
+                    </select>
+                </div>
+                <div id="searchResultsAlerts" class="search-results"></div>
+                <div class="current-location-display">
+                    <div class="location-info">
+                        <h4 id="currentLocationNameAlerts">Delhi</h4>
+                        <p id="currentLocationTypeAlerts">Select a location to view data</p>
                     </div>
+                    <button onclick="refreshEnvironmentalData()" class="refresh-btn" id="refreshEnvironmentalBtn">
+                        <i class="fas fa-sync-alt"></i>
+                        <span data-i18n="refresh">Refresh</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -154,29 +161,7 @@
                 </div>
             </div>
         </section>
-        <!-- AI Predictions Section -->
-        <section class="ml-predictions-section">
-            <div class="section-header">
-                <h2><i class="fas fa-brain"></i> <span data-i18n="aiEnvironmentalPredictions">AI Environmental Predictions</span></h2>
-                <div class="ml-controls">
-                    <div class="select-wrapper">
-                        <select id="citySelect" class="city-select">
-                            <option value="" data-i18n="selectSmallTown">🏡 Select a small town/village</option>
-                            <!-- Small towns will be loaded dynamically -->
-                        </select>
-                        <i class="fas fa-chevron-down select-arrow"></i>
-                    </div>
-                    <button id="generateAlertsBtn" class="predict-btn btn-instant-response" onclick="loadAlertPredictions()">
-                        <i class="fas fa-magic"></i>
-                        <span data-i18n="predictAlerts">Predict Alerts</span>
-                        <div class="btn-glow"></div>
-                    </button>
-                </div>
-            </div>
-            <div class="alert-predictions-grid" id="alertPredictions" style="display: none;">
-                <!-- Alert predictions will be loaded here -->
-            </div>
-        </section>
+
 
         <!-- Alert Cards Grid -->
         <section class="alerts-grid">
@@ -224,10 +209,6 @@
                             <i class="fas fa-search"></i>
                             <span data-i18n="analyzeRisk">Analyze Risk</span>
                         </button>
-                        <button class="action-btn secondary">
-                            <i class="fas fa-bell"></i>
-                            <span data-i18n="setAlert">Set Alert</span>
-                        </button>
                     </div>
                 </div>
 
@@ -268,10 +249,6 @@
                         <button class="action-btn primary" onclick="getFloodPrediction()">
                             <i class="fas fa-waves"></i>
                             <span data-i18n="checkStatus">Check Status</span>
-                        </button>
-                        <button class="action-btn secondary">
-                            <i class="fas fa-map"></i>
-                            <span data-i18n="viewMap">View Map</span>
                         </button>
                     </div>
                 </div>
@@ -314,10 +291,6 @@
                             <i class="fas fa-sun"></i>
                             <span data-i18n="assessRisk">Assess Risk</span>
                         </button>
-                        <button class="action-btn secondary">
-                            <i class="fas fa-chart-area"></i>
-                            <span data-i18n="viewTrends">View Trends</span>
-                        </button>
                     </div>
                 </div>
 
@@ -358,10 +331,6 @@
                         <button class="action-btn primary" onclick="getCoastalMonitoring()">
                             <i class="fas fa-binoculars"></i>
                             <span data-i18n="monitorCoast">Monitor Coast</span>
-                        </button>
-                        <button class="action-btn secondary">
-                            <i class="fas fa-satellite"></i>
-                            <span data-i18n="satelliteView">Satellite View</span>
                         </button>
                     </div>
                 </div>
@@ -448,7 +417,7 @@
             const generateBtn = document.getElementById('generateAlertsBtn');
             if (generateBtn) {
                 generateBtn.onclick = function() {
-                    showLoadingAlert('Loading alert predictions...');
+                    console.log('Loading alert predictions...');
                     setTimeout(loadAlertPredictions, 100);
                 };
             }
@@ -512,7 +481,6 @@
             } catch (error) {
                 console.warn('⚠️ Progressive loading failed, using sample data:', error.message);
                 updateLoadingProgress(100, 'Using sample data');
-                showPermanentSampleMode();
             }
         }
         
@@ -627,25 +595,7 @@
             }
         }
         
-        // Show permanent sample mode
-        function showPermanentSampleMode() {
-            const warningDiv = document.createElement('div');
-            warningDiv.className = 'sample-mode-notice';
-            warningDiv.innerHTML = `
-                <div class="notice-content">
-                    <i class="fas fa-flask"></i>
-                    <span data-i18n="runningInSampleDataMode">Running in sample data mode - Real data unavailable</span>
-                    <button onclick="retryRealData()" class="retry-btn">
-                        <i class="fas fa-sync-alt"></i> <span data-i18n="retry">Retry</span>
-                    </button>
-                </div>
-            `;
-            
-            const alertSection = document.querySelector('.alert-section');
-            if (alertSection) {
-                alertSection.insertBefore(warningDiv, alertSection.firstChild);
-            }
-        }
+
         
         // Update loading progress
         function updateLoadingProgress(percent, message) {
@@ -661,37 +611,9 @@
             }
         }
         
-        // Show loading alert
-        function showLoadingAlert(message) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'loading-alert';
-            alertDiv.innerHTML = `
-                <div class="alert-content">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(alertDiv);
-            
-            setTimeout(() => {
-                alertDiv.style.opacity = '0';
-                setTimeout(() => alertDiv.remove(), 300);
-            }, 2000);
-        }
+
         
-        // Retry real data loading
-        function retryRealData() {
-            console.log('🔄 Retrying real data loading...');
-            
-            const notice = document.querySelector('.sample-mode-notice');
-            if (notice) notice.remove();
-            
-            const warning = document.getElementById('connectionWarning');
-            if (warning) warning.remove();
-            
-            loadRealDataProgressively();
-        }
+
         
         // Update dashboard status indicator
         function updateDashboardStatus(status, message) {
@@ -750,7 +672,7 @@
                 availableCities = getFallbackCities();
                 populateCityDropdown(availableCities);
                 
-                showFallbackData();
+                console.log('Using fallback data');
                 console.warn('Using fallback cities data');
             }
         }
@@ -808,7 +730,7 @@
                 
             } catch (error) {
                 console.error(`❌ Failed to load environmental data for ${cityName}:`, error.message);
-                showFallbackData();
+                console.log('Using fallback data');
             } finally {
                 dashboardState.isLoading = false;
             }
@@ -944,7 +866,7 @@
                 
             } catch (error) {
                 console.error(`❌ Failed to load environmental data for ${cityName}:`, error.message);
-                showFallbackData();
+                console.log('Using fallback data');
             } finally {
                 dashboardState.isLoading = false;
             }
@@ -1081,30 +1003,454 @@
             // Start immediate initialization (no delays)
             initializeDashboard();
             
-            // Add event listeners
-            document.getElementById('locationSearch').addEventListener('keypress', function(e) {
+            // Add event listeners for alerts page
+            document.getElementById('locationSearchAlerts').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
-                    searchLocation();
+                    searchLocationAlerts();
                 }
             });
             
-            document.getElementById('citySelect').addEventListener('change', function(e) {
-                if (e.target.value) {
-                    const cityData = JSON.parse(e.target.selectedOptions[0].dataset.cityData || '{}');
-                    document.getElementById('currentLocationName').textContent = cityData.name || e.target.value;
-                    document.getElementById('currentLocationType').textContent = `${cityData.type || 'Town'}, ${cityData.state || ''}`;
-                    loadEnvironmentalData(e.target.value);
-                }
+            document.getElementById('citySelectAlerts').addEventListener('change', function(e) {
+                selectLocationAlerts();
             });
             
             // Hide search results when clicking outside
             document.addEventListener('click', function(e) {
-                const searchContainer = document.querySelector('.location-search-wrapper');
-                if (!searchContainer.contains(e.target)) {
-                    document.getElementById('searchResults').style.display = 'none';
+                const searchContainer = document.querySelector('.location-search-section');
+                const searchResults = document.getElementById('searchResultsAlerts');
+                if (searchContainer && !searchContainer.contains(e.target)) {
+                    searchResults.style.display = 'none';
                 }
             });
         });
+
+        // =============== ENVIRONMENTAL CONDITIONS API INTEGRATION ===============
+        
+        let availableCitiesAlerts = [];
+        let currentLocationAlerts = 'Delhi';
+        let lastEnvironmentalFetch = 0;
+        const ENVIRONMENTAL_FETCH_COOLDOWN = 5000; // 5 seconds
+        
+        // Load available cities for alerts page
+        async function loadCitiesForAlerts() {
+            try {
+                console.log('Loading cities for alerts page...');
+                const response = await fetch('http://localhost:4002/api/weather/cities?limit=20');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    availableCitiesAlerts = result.data;
+                    populateCityDropdownAlerts(availableCitiesAlerts);
+                    console.log(`Loaded ${availableCitiesAlerts.length} cities for alerts`);
+                    
+                    // Auto-load Delhi environmental data
+                    loadEnvironmentalDataAlerts(currentLocationAlerts);
+                } else {
+                    console.error('Failed to load cities:', result.error);
+                    // Use fallback cities
+                    availableCitiesAlerts = getFallbackCitiesAlerts();
+                    populateCityDropdownAlerts(availableCitiesAlerts);
+                    loadEnvironmentalDataAlerts(currentLocationAlerts);
+                }
+            } catch (error) {
+                console.error('Error loading cities:', error);
+                availableCitiesAlerts = getFallbackCitiesAlerts();
+                populateCityDropdownAlerts(availableCitiesAlerts);
+                loadEnvironmentalDataAlerts(currentLocationAlerts);
+            }
+        }
+        
+        // Populate city dropdown for alerts
+        function populateCityDropdownAlerts(cities) {
+            const citySelect = document.getElementById('citySelectAlerts');
+            citySelect.innerHTML = '<option value="">🏡 Select a location</option>';
+            
+            cities.forEach(city => {
+                const typeIcon = getLocationTypeIconAlerts(city.type || 'Town');
+                const option = document.createElement('option');
+                option.value = city.name;
+                option.textContent = `${typeIcon} ${city.name} (${city.state || 'India'})`;
+                option.dataset.cityData = JSON.stringify(city);
+                citySelect.appendChild(option);
+            });
+        }
+        
+        // Get fallback cities for alerts
+        function getFallbackCitiesAlerts() {
+            return [
+                { id: 1, name: 'Delhi', state: 'Delhi', type: 'Capital' },
+                { id: 2, name: 'Mumbai', state: 'Maharashtra', type: 'City' },
+                { id: 3, name: 'Bangalore', state: 'Karnataka', type: 'City' },
+                { id: 4, name: 'Chennai', state: 'Tamil Nadu', type: 'City' },
+                { id: 5, name: 'Kolkata', state: 'West Bengal', type: 'City' },
+                { id: 6, name: 'Mandla', state: 'Madhya Pradesh', type: 'Town' },
+                { id: 7, name: 'Dharamshala', state: 'Himachal Pradesh', type: 'Hill Station' },
+                { id: 8, name: 'Raichur', state: 'Karnataka', type: 'Town' }
+            ];
+        }
+        
+        // Get location type icon for alerts
+        function getLocationTypeIconAlerts(type) {
+            const icons = {
+                'Capital': '🏛️',
+                'City': '🏙️',
+                'Town': '🏘️',
+                'Hill Station': '⛰️',
+                'Desert Town': '🏜️',
+                'Coastal Town': '🏖️'
+            };
+            return icons[type] || '🏘️';
+        }
+        
+        // Search location for alerts
+        async function searchLocationAlerts() {
+            const searchInput = document.getElementById('locationSearchAlerts');
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                alert('Please enter a location to search');
+                return;
+            }
+            
+            const searchResults = document.getElementById('searchResultsAlerts');
+            searchResults.innerHTML = '<div class="search-loading">🔍 Searching...</div>';
+            searchResults.style.display = 'block';
+            
+            try {
+                // Search in loaded cities first
+                const localResults = availableCitiesAlerts.filter(city => 
+                    city.name.toLowerCase().includes(query.toLowerCase()) ||
+                    (city.state && city.state.toLowerCase().includes(query.toLowerCase()))
+                );
+                
+                displaySearchResultsAlerts(localResults);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                searchResults.innerHTML = '<div class="search-error">❌ Search failed</div>';
+            }
+        }
+        
+        // Display search results for alerts
+        function displaySearchResultsAlerts(results) {
+            const searchResults = document.getElementById('searchResultsAlerts');
+            
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="search-no-results">❌ No locations found</div>';
+                return;
+            }
+            
+            let html = '';
+            results.forEach(city => {
+                const typeIcon = getLocationTypeIconAlerts(city.type || 'Town');
+                html += `
+                    <div class="search-result-item" onclick="selectSearchResultAlerts('${city.name}', '${city.type || 'Town'}', '${city.state || 'India'}')">
+                        <div class="result-icon">${typeIcon}</div>
+                        <div class="result-info">
+                            <div class="result-name">${city.name}</div>
+                            <div class="result-details">${city.state || 'India'} • ${city.type || 'Town'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            searchResults.innerHTML = html;
+        }
+        
+        // Select search result for alerts
+        function selectSearchResultAlerts(cityName, cityType, stateName) {
+            document.getElementById('locationSearchAlerts').value = cityName;
+            document.getElementById('citySelectAlerts').value = cityName;
+            document.getElementById('searchResultsAlerts').style.display = 'none';
+            
+            // Update current location display
+            document.getElementById('currentLocationNameAlerts').textContent = cityName;
+            document.getElementById('currentLocationTypeAlerts').textContent = `${cityType}, ${stateName}`;
+            
+            currentLocationAlerts = cityName;
+            
+            // Load environmental data for selected location
+            loadEnvironmentalDataAlerts(cityName);
+        }
+        
+        // Select location from dropdown
+        function selectLocationAlerts() {
+            const citySelect = document.getElementById('citySelectAlerts');
+            const selectedCity = citySelect.value;
+            
+            if (selectedCity) {
+                const cityData = JSON.parse(citySelect.selectedOptions[0].dataset.cityData || '{}');
+                document.getElementById('currentLocationNameAlerts').textContent = cityData.name || selectedCity;
+                document.getElementById('currentLocationTypeAlerts').textContent = `${cityData.type || 'Town'}, ${cityData.state || 'India'}`;
+                
+                currentLocationAlerts = selectedCity;
+                loadEnvironmentalDataAlerts(selectedCity);
+            }
+        }
+        
+        // Load environmental data for alerts page
+        async function loadEnvironmentalDataAlerts(cityName) {
+            if (!cityName) return;
+            
+            // Prevent rapid successive calls
+            const now = Date.now();
+            if (now - lastEnvironmentalFetch < ENVIRONMENTAL_FETCH_COOLDOWN) {
+                console.log(`Skipping environmental fetch for ${cityName} - too soon`);
+                return;
+            }
+            lastEnvironmentalFetch = now;
+            
+            try {
+                showEnvironmentalLoading();
+                
+                console.log(`Fetching environmental data for ${cityName}...`);
+                const response = await fetch(`http://localhost:4002/api/weather/current/${cityName}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    const weather = result.data;
+                    
+                    // Check if we have OpenWeather data
+                    if (weather.openWeatherData && weather.openWeatherData.data) {
+                        const data = weather.openWeatherData.data;
+                        const environmentalData = {
+                            temperature: parseFloat(data.main.temp),
+                            temp_min: parseFloat(data.main.temp_min),
+                            temp_max: parseFloat(data.main.temp_max),
+                            humidity: Math.round(data.main.humidity),
+                            rainfall: parseFloat(data.rain?.['1h'] || 0),
+                            air_quality_index: Math.round(data.main.pressure / 10) // Mock AQI based on pressure
+                        };
+                        
+                        updateEnvironmentalDisplayAlerts(environmentalData);
+                        console.log('Successfully updated environmental data for', cityName);
+                    } else {
+                        console.warn('No weather data in response for', cityName);
+                        // Try database fallback
+                        await loadEnvironmentalDataFromDBAlerts(cityName);
+                    }
+                } else {
+                    console.error('API returned error:', result.error);
+                    showEnvironmentalError('Failed to load environmental data: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error fetching environmental data:', error);
+                showEnvironmentalError('Unable to connect to server. Please check if the server is running.');
+            }
+        }
+        
+        // Fallback: try database for environmental data
+        async function loadEnvironmentalDataFromDBAlerts(cityName) {
+            try {
+                console.log(`Trying cached environmental data for ${cityName}...`);
+                const response = await fetch(`http://localhost:4002/api/weather/latest/${cityName}`);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        const data = result.data;
+                        const environmentalData = {
+                            temperature: data.temperature || 25,
+                            temp_min: data.temp_min || 20,
+                            temp_max: data.temp_max || 30,
+                            humidity: data.humidity || 60,
+                            rainfall: data.rainfall || 0,
+                            air_quality_index: data.air_quality_index || 50
+                        };
+                        
+                        updateEnvironmentalDisplayAlerts(environmentalData);
+                        console.log('Using cached environmental data for', cityName);
+                        return;
+                    }
+                }
+                
+                showEnvironmentalError(`No environmental data for ${cityName}. Server may be starting up...`);
+            } catch (error) {
+                console.error('Database fallback failed:', error);
+                showEnvironmentalError('No data available');
+            }
+        }
+        
+        // Show loading state for environmental conditions
+        function showEnvironmentalLoading() {
+            const loadingElements = [
+                { id: 'envTemperature', text: '--°C' },
+                { id: 'envHumidity', text: '--%' },
+                { id: 'envRainfall', text: '-- mm' },
+                { id: 'envAQI', text: '--' },
+                { id: 'envTempStatus', text: 'Loading...' },
+                { id: 'envHumidityStatus', text: 'Loading...' },
+                { id: 'envRainfallStatus', text: 'Loading...' },
+                { id: 'envAQIStatus', text: 'Loading...' },
+                { id: 'tempMin', text: '--' },
+                { id: 'tempMax', text: '--' }
+            ];
+            
+            loadingElements.forEach(element => {
+                const el = document.getElementById(element.id);
+                if (el) {
+                    el.textContent = element.text;
+                    el.style.opacity = '0.6';
+                }
+            });
+        }
+        
+        // Update environmental display with real data
+        function updateEnvironmentalDisplayAlerts(data) {
+            // Temperature
+            document.getElementById('envTemperature').textContent = `${data.temperature.toFixed(1)}°C`;
+            document.getElementById('tempMin').textContent = data.temp_min?.toFixed(1) || '--';
+            document.getElementById('tempMax').textContent = data.temp_max?.toFixed(1) || '--';
+            
+            const tempStatus = getTemperatureStatusAlerts(data.temperature);
+            const tempStatusEl = document.getElementById('envTempStatus');
+            tempStatusEl.textContent = tempStatus.text;
+            tempStatusEl.className = `env-status ${tempStatus.class}`;
+            
+            // Humidity
+            document.getElementById('envHumidity').textContent = `${data.humidity}%`;
+            const humidityFill = document.getElementById('humidityFillBar');
+            if (humidityFill) {
+                humidityFill.style.width = `${data.humidity}%`;
+            }
+            
+            const humidityStatus = getHumidityStatusAlerts(data.humidity);
+            const humidityStatusEl = document.getElementById('envHumidityStatus');
+            humidityStatusEl.textContent = humidityStatus.text;
+            humidityStatusEl.className = `env-status ${humidityStatus.class}`;
+            
+            // Rainfall
+            document.getElementById('envRainfall').textContent = `${data.rainfall.toFixed(1)} mm`;
+            const rainLevel = document.getElementById('rainLevelIndicator');
+            if (rainLevel) {
+                const level = Math.min(data.rainfall / 50 * 100, 100);
+                rainLevel.style.height = `${level}%`;
+            }
+            
+            const rainfallStatus = getRainfallStatusAlerts(data.rainfall);
+            const rainfallStatusEl = document.getElementById('envRainfallStatus');
+            rainfallStatusEl.textContent = rainfallStatus.text;
+            rainfallStatusEl.className = `env-status ${rainfallStatus.class}`;
+            
+            // Air Quality
+            document.getElementById('envAQI').textContent = data.air_quality_index;
+            const aqiLevel = document.getElementById('aqiLevelIndicator');
+            if (aqiLevel) {
+                const level = Math.min(data.air_quality_index / 500 * 100, 100);
+                aqiLevel.style.width = `${level}%`;
+            }
+            
+            const aqiStatus = getAQIStatusAlerts(data.air_quality_index);
+            const aqiStatusEl = document.getElementById('envAQIStatus');
+            aqiStatusEl.textContent = aqiStatus.text;
+            aqiStatusEl.className = `env-status ${aqiStatus.class}`;
+            
+            // Restore opacity
+            document.querySelectorAll('.env-value, .env-status').forEach(el => {
+                el.style.opacity = '1';
+            });
+        }
+        
+        // Status helper functions for alerts
+        function getTemperatureStatusAlerts(temp) {
+            if (temp < 10) return { text: 'Very Cold', class: 'cold' };
+            if (temp < 20) return { text: 'Cool', class: 'cool' };
+            if (temp < 30) return { text: 'Comfortable', class: 'comfortable' };
+            if (temp < 35) return { text: 'Warm', class: 'warm' };
+            if (temp < 40) return { text: 'Hot', class: 'hot' };
+            return { text: 'Extreme Heat', class: 'extreme' };
+        }
+        
+        function getHumidityStatusAlerts(humidity) {
+            if (humidity < 30) return { text: 'Dry', class: 'dry' };
+            if (humidity < 60) return { text: 'Comfortable', class: 'comfortable' };
+            if (humidity < 80) return { text: 'Humid', class: 'humid' };
+            return { text: 'Very Humid', class: 'very-humid' };
+        }
+        
+        function getRainfallStatusAlerts(rainfall) {
+            if (rainfall === 0) return { text: 'No Rain', class: 'no-rain' };
+            if (rainfall < 2) return { text: 'Light Rain', class: 'light' };
+            if (rainfall < 10) return { text: 'Moderate Rain', class: 'moderate' };
+            if (rainfall < 30) return { text: 'Heavy Rain', class: 'heavy' };
+            return { text: 'Extreme Rain', class: 'extreme' };
+        }
+        
+        function getAQIStatusAlerts(aqi) {
+            if (aqi <= 50) return { text: 'Good', class: 'good' };
+            if (aqi <= 100) return { text: 'Moderate', class: 'moderate' };
+            if (aqi <= 150) return { text: 'Unhealthy for Sensitive', class: 'unhealthy-sensitive' };
+            if (aqi <= 200) return { text: 'Unhealthy', class: 'unhealthy' };
+            if (aqi <= 300) return { text: 'Very Unhealthy', class: 'very-unhealthy' };
+            return { text: 'Hazardous', class: 'hazardous' };
+        }
+        
+        // Show environmental error
+        function showEnvironmentalError(message) {
+            console.error('Environmental error:', message);
+            document.getElementById('envTemperature').textContent = 'Error';
+            document.getElementById('envHumidity').textContent = 'Error';
+            document.getElementById('envRainfall').textContent = 'Error';
+            document.getElementById('envAQI').textContent = 'Error';
+            document.getElementById('envTempStatus').textContent = message;
+            document.getElementById('envHumidityStatus').textContent = 'Error';
+            document.getElementById('envRainfallStatus').textContent = 'Error';
+            document.getElementById('envAQIStatus').textContent = 'Error';
+        }
+        
+        // Refresh environmental data
+        function refreshEnvironmentalData() {
+            console.log('Manual refresh of environmental data for', currentLocationAlerts);
+            
+            // Add visual feedback to refresh button
+            const refreshBtn = document.getElementById('refreshEnvironmentalBtn');
+            if (refreshBtn) {
+                const icon = refreshBtn.querySelector('i');
+                
+                // Disable button temporarily
+                refreshBtn.disabled = true;
+                refreshBtn.style.opacity = '0.7';
+                if (icon) {
+                    icon.style.animation = 'spin 1s linear infinite';
+                }
+                
+                // Re-enable button after 3 seconds
+                setTimeout(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.style.opacity = '1';
+                    if (icon) {
+                        icon.style.animation = 'none';
+                    }
+                }, 3000);
+            }
+            
+            // Reset cooldown and fetch data
+            lastEnvironmentalFetch = 0;
+            loadEnvironmentalDataAlerts(currentLocationAlerts);
+        }
+        
+        // Initialize alerts environmental data system
+        function initializeAlertsEnvironmental() {
+            console.log('🌍 Initializing environmental conditions for alerts page...');
+            
+            // Load cities and initial environmental data
+            loadCitiesForAlerts();
+        }
+        
+        // Start environmental system when page loads
+        setTimeout(() => {
+            initializeAlertsEnvironmental();
+        }, 1000);
 
         // =============== ML ALERT PREDICTIONS ===============
         

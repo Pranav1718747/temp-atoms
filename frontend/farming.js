@@ -22,7 +22,7 @@ async function searchLocation() {
   const query = searchInput.value.trim();
   
   if (!query) {
-    showNotification('Please enter a location to search', 'warning');
+    showNotification(translateText('pleaseEnterLocationToSearch'), 'warning');
     return;
   }
   
@@ -51,12 +51,12 @@ async function performLocationSearch(query) {
       hideLoading();
     } else {
       hideLoading();
-      showSearchError('No locations found for your search. Try searching for a different city or village.');
+      showSearchError(translateText('noLocationsFound'));
     }
   } catch (error) {
     console.error('Error searching location:', error);
     hideLoading();
-    showSearchError('Failed to search location. Please check your connection and try again.');
+    showSearchError(translateText('failedToSearchLocation'));
   }
 }
 
@@ -78,11 +78,11 @@ async function performLocationSearchQuiet(query) {
     } else if (result.success && result.data && result.data.length > 0) {
       displaySearchResults(result.data);
     } else {
-      showSearchError('No locations found for your search.');
+      showSearchError(translateText('noLocationsFoundSimple'));
     }
   } catch (error) {
     console.error('Error searching location:', error);
-    showSearchError('Failed to search location.');
+    showSearchError(translateText('failedToSearchLocationSimple'));
   }
 }
 
@@ -91,14 +91,14 @@ function displaySearchResults(locations) {
   const resultsContainer = document.getElementById('searchResults');
   
   if (!locations || locations.length === 0) {
-    showSearchError('No locations found.');
+    showSearchError(translateText('noLocationsFoundBasic'));
     return;
   }
   
-  let html = '<div class="search-results-header">Found Locations:</div>';
+  let html = `<div class="search-results-header">${translateText('foundLocations')}</div>`;
   
   locations.forEach((location, index) => {
-    const country = location.country || 'Unknown';
+    const country = location.country || translateText('unknown');
     const state = location.admin1 || location.state || '';
     const region = location.admin2 || location.admin3 || '';
     const population = location.population ? `${(location.population / 1000).toFixed(0)}K people` : '';
@@ -184,37 +184,37 @@ function updateSeasonDisplay(location) {
   const month = now.getMonth() + 1; // 1-12
   const latitude = location.latitude;
   
-  let season = 'Unknown';
+  let season = translateText('unknown');
   let seasonIcon = '🌿';
   
   // Northern hemisphere (latitude > 0)
   if (latitude > 0) {
     if (month >= 3 && month <= 5) {
-      season = 'Spring';
+      season = translateText('spring');
       seasonIcon = '🌸';
     } else if (month >= 6 && month <= 8) {
-      season = 'Summer';
+      season = translateText('summer');
       seasonIcon = '☀️';
     } else if (month >= 9 && month <= 11) {
-      season = 'Autumn';
+      season = translateText('autumn');
       seasonIcon = '🍂';
     } else {
-      season = 'Winter';
+      season = translateText('winter');
       seasonIcon = '❄️';
     }
   } else {
     // Southern hemisphere (latitude < 0) - seasons are opposite
     if (month >= 3 && month <= 5) {
-      season = 'Autumn';
+      season = translateText('autumn');
       seasonIcon = '🍂';
     } else if (month >= 6 && month <= 8) {
-      season = 'Winter';
+      season = translateText('winter');
       seasonIcon = '❄️';
     } else if (month >= 9 && month <= 11) {
-      season = 'Spring';
+      season = translateText('spring');
       seasonIcon = '🌸';
     } else {
-      season = 'Summer';
+      season = translateText('summer');
       seasonIcon = '☀️';
     }
   }
@@ -223,10 +223,10 @@ function updateSeasonDisplay(location) {
   if (Math.abs(latitude) < 23.5) {
     // Tropical region - use wet/dry season
     if (month >= 4 && month <= 9) {
-      season = 'Wet Season';
+      season = translateText('wetSeason');
       seasonIcon = '🌧️';
     } else {
-      season = 'Dry Season';
+      season = translateText('drySeason');
       seasonIcon = '☀️';
     }
   }
@@ -290,7 +290,7 @@ let isLoadingAIAnalysis = false;
 // Load AI analysis for current location
 async function loadAIAnalysis() {
   if (isLoadingAIAnalysis) {
-    showNotification('AI analysis already in progress...', 'info');
+    showNotification(translateText('aiAnalysisInProgress'), 'info');
     return;
   }
   
@@ -329,7 +329,7 @@ async function loadAIAnalysis() {
   } catch (error) {
     console.error('Error loading AI analysis:', error);
     showAIError(error.message);
-    showNotification('Failed to load AI analysis. Please try again.', 'error');
+    showNotification(translateText('failedToLoadAIAnalysis'), 'error');
   } finally {
     isLoadingAIAnalysis = false;
     hideAILoading();
@@ -2110,44 +2110,7 @@ function updateStatusDisplay(elementId, condition) {
   }
 }
 
-// Update overall condition display
-function updateOverallCondition(conditions) {
-  const container = document.getElementById('overallCondition');
-  const iconElement = container.querySelector('.condition-icon');
-  const textElement = container.querySelector('.condition-text');
-  
-  const conditionInfo = {
-    good: {
-      icon: '🌟',
-      title: 'Excellent Farming Conditions!',
-      message: 'Weather is perfect for your crops. Great time for farming activities.',
-      class: 'condition-excellent'
-    },
-    fair: {
-      icon: '⚖️',
-      title: 'Fair Farming Conditions',
-      message: 'Weather is okay. Some adjustments may be needed for optimal growth.',
-      class: 'condition-fair'
-    },
-    poor: {
-      icon: '⚠️',
-      title: 'Challenging Conditions',
-      message: 'Weather needs attention. Follow recommendations carefully.',
-      class: 'condition-poor'
-    }
-  };
-  
-  const info = conditionInfo[conditions.overall] || conditionInfo.fair;
-  
-  iconElement.textContent = info.icon;
-  textElement.innerHTML = `<h3>${info.title}</h3><p>${info.message}</p>`;
-  
-  // Update container class
-  container.classList.remove('condition-excellent', 'condition-good', 'condition-fair', 'condition-poor');
-  container.classList.add(info.class);
-}
-
-// Update recommendations grid
+// Update recommendations grid with proper translation support
 function updateRecommendations(recommendations) {
   const grid = document.getElementById('recommendationGrid');
   if (!grid) {
@@ -2159,7 +2122,7 @@ function updateRecommendations(recommendations) {
   
   // Handle missing recommendations data
   if (!recommendations) {
-    grid.innerHTML = '<div class="no-data-message"><i class="fas fa-exclamation-triangle"></i><p>Unable to load recommendations. Please refresh the page.</p></div>';
+    grid.innerHTML = `<div class="no-data-message"><i class="fas fa-exclamation-triangle"></i><p>${translateText('unableToLoadRecommendations')}</p></div>`;
     return;
   }
   
@@ -2168,45 +2131,45 @@ function updateRecommendations(recommendations) {
   // Temperature recommendation
   if (recommendations.conditions && recommendations.conditions.temperature) {
     const tempRec = recommendations.conditions.temperature;
-    addRecommendationCard(grid, '🌡️', 'Temperature Management', 
-      tempRec.message || 'Temperature conditions detected', 
-      tempRec.action || tempRec.status || 'Monitor temperature levels');
+    addRecommendationCard(grid, '🌡️', translateText('temperatureManagement'), 
+      tempRec.message || translateText('temperatureConditionsDetected'), 
+      tempRec.action || tempRec.status || translateText('monitorTemperatureLevels'));
     cardCount++;
   }
   
   // Humidity recommendation
   if (recommendations.conditions && recommendations.conditions.humidity) {
     const humidityRec = recommendations.conditions.humidity;
-    addRecommendationCard(grid, '💧', 'Humidity Control', 
-      humidityRec.message || 'Humidity conditions detected', 
-      humidityRec.action || humidityRec.status || 'Monitor humidity levels');
+    addRecommendationCard(grid, '💧', translateText('humidityControl'), 
+      humidityRec.message || translateText('humidityConditionsDetected'), 
+      humidityRec.action || humidityRec.status || translateText('monitorHumidityLevels'));
     cardCount++;
   }
   
   // Water/Rainfall recommendation
   if (recommendations.conditions && recommendations.conditions.water) {
     const waterRec = recommendations.conditions.water;
-    addRecommendationCard(grid, '🌧️', 'Water Management', 
-      waterRec.message || 'Water conditions detected', 
-      waterRec.action || waterRec.status || 'Monitor water levels');
+    addRecommendationCard(grid, '🌧️', translateText('waterManagement'), 
+      waterRec.message || translateText('waterConditionsDetected'), 
+      waterRec.action || waterRec.status || translateText('monitorWaterLevels'));
     cardCount++;
   }
   
   // Irrigation recommendation (from irrigation section)
   if (recommendations.irrigation) {
     const irrigation = recommendations.irrigation;
-    addRecommendationCard(grid, irrigation.icon || '💧', 'Irrigation Advice', 
-      irrigation.message || 'Irrigation recommendations available', 
-      `Frequency: ${irrigation.frequency || 'as needed'} | Urgency: ${irrigation.urgency || 'medium'}`);
+    addRecommendationCard(grid, irrigation.icon || '💧', translateText('irrigationAdvice'), 
+      irrigation.message || translateText('irrigationRecommendationsAvailable'), 
+      `${translateText('frequency')}: ${translateText(irrigation.frequency || 'asNeeded')} | ${translateText('urgency')}: ${translateText(irrigation.urgency || 'medium')}`);
     cardCount++;
   }
   
   // Protection advice
   if (recommendations.protection && recommendations.protection.length > 0) {
     recommendations.protection.forEach(protection => {
-      addRecommendationCard(grid, protection.icon || '🛡️', protection.action || 'Protection Advice', 
-        protection.message || 'Protection recommendations based on current weather.', 
-        `Priority: ${protection.urgency || 'medium'}`);
+      addRecommendationCard(grid, protection.icon || '🛡️', protection.action || translateText('protectionAdvice'), 
+        protection.message || translateText('protectionRecommendationsBasedOnWeather'), 
+        `${translateText('priority')}: ${translateText(protection.urgency || 'medium')}`);
       cardCount++;
     });
   }
@@ -2214,24 +2177,27 @@ function updateRecommendations(recommendations) {
   // Timing advice
   if (recommendations.timing && recommendations.timing.length > 0) {
     recommendations.timing.forEach(timing => {
-      addRecommendationCard(grid, timing.icon || '📅', timing.activity || 'Timing Advice', 
-        timing.message || 'Timing recommendations for farming activities.', 
-        `Priority: ${timing.priority || 'medium'}`);
+      addRecommendationCard(grid, timing.icon || '📅', timing.activity || translateText('timingAdvice'), 
+        timing.message || translateText('timingRecommendationsForFarming'), 
+        `${translateText('priority')}: ${translateText(timing.priority || 'medium')}`);
       cardCount++;
     });
   }
   
   // If no recommendations were added, show a default message
   if (cardCount === 0) {
-    addRecommendationCard(grid, '🌿', 'General Advice', 
-      'Weather conditions are suitable for farming activities.', 
-      'Continue with regular farming practices.');
+    addRecommendationCard(grid, '🌿', translateText('generalAdvice'), 
+      translateText('weatherConditionsSuitable'), 
+      translateText('continueWithRegularFarming'));
   }
   
   console.log(`Recommendations updated successfully (${cardCount} cards)`);
+  
+  // Dispatch language change event to ensure translations are applied
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: getCurrentLanguage() } }));
 }
 
-// Add recommendation card
+// Add recommendation card with translation support
 function addRecommendationCard(container, icon, title, message, action) {
   const card = document.createElement('div');
   card.className = 'recommendation-card';
@@ -2243,7 +2209,7 @@ function addRecommendationCard(container, icon, title, message, action) {
   container.appendChild(card);
 }
 
-// Update irrigation section
+// Update irrigation section with translation support
 function updateIrrigation(irrigation) {
   const card = document.getElementById('irrigationCard');
   if (!card) {
@@ -2263,8 +2229,8 @@ function updateIrrigation(irrigation) {
   if (!irrigation) {
     icon.textContent = '💧';
     content.innerHTML = `
-      <h3>Irrigation Status</h3>
-      <p>Unable to load irrigation recommendations. Please check weather data.</p>
+      <h3>${translateText('irrigationStatus')}</h3>
+      <p>${translateText('unableToLoadIrrigationRecommendations')}</p>
     `;
     return;
   }
@@ -2282,18 +2248,61 @@ function updateIrrigation(irrigation) {
   }
   
   const frequencyText = irrigation.frequency ? 
-    irrigation.frequency.charAt(0).toUpperCase() + irrigation.frequency.slice(1) : 'Regular';
+    irrigation.frequency.charAt(0).toUpperCase() + irrigation.frequency.slice(1) : translateText('regular');
   
   content.innerHTML = `
-    <h3>${frequencyText} Irrigation ${irrigation.needed ? 'Needed' : 'Not Required'}</h3>
-    <p>${irrigation.message || 'Irrigation recommendations based on current weather conditions.'}</p>
-    ${irrigation.urgency ? `<div class="urgency-indicator urgency-${irrigation.urgency}">${irrigation.urgency.toUpperCase()}</div>` : ''}
+    <h3>${frequencyText} ${translateText('irrigation')} ${irrigation.needed ? translateText('needed') : translateText('notRequired')}</h3>
+    <p>${irrigation.message || translateText('irrigationRecommendationsBasedOnWeather')}</p>
+    ${irrigation.urgency ? `<div class="urgency-indicator urgency-${irrigation.urgency}">${translateText(irrigation.urgency.toUpperCase())}</div>` : ''}
   `;
   
   console.log('Irrigation section updated successfully');
+  
+  // Dispatch language change event to ensure translations are applied
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: getCurrentLanguage() } }));
 }
 
-// Update suitable crops section
+// Update overall condition display with translation support
+function updateOverallCondition(conditions) {
+  const container = document.getElementById('overallCondition');
+  const iconElement = container.querySelector('.condition-icon');
+  const textElement = container.querySelector('.condition-text');
+  
+  const conditionInfo = {
+    good: {
+      icon: '🌟',
+      title: translateText('excellentFarmingConditions'),
+      message: translateText('weatherPerfectForCrops'),
+      class: 'condition-excellent'
+    },
+    fair: {
+      icon: '⚖️',
+      title: translateText('fairFarmingConditions'),
+      message: translateText('weatherOkayWithAdjustments'),
+      class: 'condition-fair'
+    },
+    poor: {
+      icon: '⚠️',
+      title: translateText('challengingConditions'),
+      message: translateText('weatherNeedsAttention'),
+      class: 'condition-poor'
+    }
+  };
+  
+  const info = conditionInfo[conditions.overall] || conditionInfo.fair;
+  
+  iconElement.textContent = info.icon;
+  textElement.innerHTML = `<h3>${info.title}</h3><p>${info.message}</p>`;
+  
+  // Update container class
+  container.classList.remove('condition-excellent', 'condition-good', 'condition-fair', 'condition-poor');
+  container.classList.add(info.class);
+  
+  // Dispatch language change event to ensure translations are applied
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: getCurrentLanguage() } }));
+}
+
+// Update suitable crops section with translation support
 function updateSuitableCrops(crops) {
   const grid = document.getElementById('cropsGrid');
   grid.innerHTML = '';
@@ -2308,11 +2317,14 @@ function updateSuitableCrops(crops) {
     card.innerHTML = `
       <div class="crop-icon">${crop.icon}</div>
       <div class="crop-name">${crop.name}</div>
-      <div class="crop-suitability ${suitabilityClass}">${crop.suitabilityText}</div>
+      <div class="crop-suitability ${suitabilityClass}">${translateText(crop.suitabilityText)}</div>
     `;
     
     grid.appendChild(card);
   });
+  
+  // Dispatch language change event to ensure translations are applied
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: getCurrentLanguage() } }));
 }
 
 // Select a crop
@@ -2322,14 +2334,14 @@ function selectCrop(cropKey) {
   loadFarmingDashboard();
 }
 
-// Update farming alerts
+// Update farming alerts with translation support
 function updateFarmingAlerts(alerts) {
   const container = document.getElementById('farmingAlerts');
   container.innerHTML = '';
   
   if (!alerts || alerts.length === 0) {
     // Show notification for normal conditions (3-second popup)
-    showNotification('All farming conditions are within normal range', 'success', 3000);
+    showNotification(translateText('allFarmingConditionsNormal'), 'success', 3000);
     return;
   }
   
@@ -2345,6 +2357,104 @@ function updateFarmingAlerts(alerts) {
     `;
     container.appendChild(alertDiv);
   });
+  
+  // Dispatch language change event to ensure translations are applied
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: getCurrentLanguage() } }));
+}
+
+// Force update dashboard with translation support
+function forceUpdateDashboard() {
+  console.log('🚀 [FORCE] Starting forced dashboard update');
+  
+  // Directly update recommendations
+  const recommendationGrid = document.getElementById('recommendationGrid');
+  if (recommendationGrid) {
+    const currentLang = getCurrentLanguage();
+    const translations = {
+      en: {
+        temperatureManagement: '🌡️ Temperature Management',
+        temperatureSuitable: 'Current temperature is suitable for farming activities.',
+        continueNormal: 'Continue normal farming activities',
+        humidityControl: '💧 Humidity Control',
+        humidityAcceptable: 'Humidity levels are within acceptable range for crop growth.',
+        monitorHumidity: 'Monitor humidity levels regularly',
+        waterManagement: '🌧️ Water Management',
+        monitorRainfall: 'Monitor rainfall and adjust irrigation accordingly.',
+        supplementIrrigation: 'Supplement with irrigation as needed'
+      },
+      hi: {
+        temperatureManagement: '🌡️ तापमान प्रबंधन',
+        temperatureSuitable: 'वर्तमान तापमान कृषि गतिविधियों के लिए उपयुक्त है।',
+        continueNormal: 'सामान्य कृषि गतिविधियां जारी रखें',
+        humidityControl: '💧 आर्द्रता नियंत्रण',
+        humidityAcceptable: 'आर्द्रता स्तर फसल वृद्धि के लिए स्वीकार्य सीमा में हैं।',
+        monitorHumidity: 'आर्द्रता स्तर नियमित रूप से निगरानी करें',
+        waterManagement: '🌧️ जल प्रबंधन',
+        monitorRainfall: 'वर्षा की निगरानी करें और सिंचाई को तदनुसार समायोजित करें।',
+        supplementIrrigation: 'आवश्यकतानुसार सिंचाई का पूरक करें'
+      }
+      // Add other languages as needed
+    };
+    
+    const t = translations[currentLang] || translations.en;
+    
+    recommendationGrid.innerHTML = `
+      <div style="padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #7cb342; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 10px 0; color: #2e7d32;">${t.temperatureManagement}</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">${t.temperatureSuitable}</p>
+        <div style="background: #e8f5e8; padding: 10px; border-radius: 8px; color: #2e7d32; font-weight: 500;">${t.continueNormal}</div>
+      </div>
+      <div style="padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #2196f3; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 10px 0; color: #1976d2;">${t.humidityControl}</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">${t.humidityAcceptable}</p>
+        <div style="background: #e3f2fd; padding: 10px; border-radius: 8px; color: #1976d2; font-weight: 500;">${t.monitorHumidity}</div>
+      </div>
+      <div style="padding: 20px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 4px solid #ff9800; margin-bottom: 1rem;">
+        <h3 style="margin: 0 0 10px 0; color: #f57c00;">${t.waterManagement}</h3>
+        <p style="margin: 0 0 15px 0; color: #666;">${t.monitorRainfall}</p>
+        <div style="background: #fff3e0; padding: 10px; border-radius: 8px; color: #f57c00; font-weight: 500;">${t.supplementIrrigation}</div>
+      </div>
+    `;
+    console.log('🚀 [FORCE] Recommendations updated successfully');
+  } else {
+    console.error('🚀 [FORCE] recommendationGrid not found!');
+  }
+  
+  // Directly update irrigation
+  const irrigationCard = document.getElementById('irrigationCard');
+  if (irrigationCard) {
+    const irrigationContent = irrigationCard.querySelector('.irrigation-content');
+    if (irrigationContent) {
+      irrigationContent.innerHTML = `
+        <h3>${translateText('regularIrrigationNeeded')}</h3>
+        <p>${translateText('basedOnWeatherConditions')}</p>
+        <div style="display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem; text-transform: uppercase; background: #fff3e0; color: #ef6c00; border: 1px solid #ff9800;">${translateText('medium')}</div>
+      `;
+      console.log('🚀 [FORCE] Irrigation updated successfully');
+    }
+  } else {
+    console.error('🚀 [FORCE] irrigationCard not found!');
+  }
+  
+  // Directly update overall condition
+  const overallCondition = document.getElementById('overallCondition');
+  if (overallCondition) {
+    const conditionIcon = overallCondition.querySelector('.condition-icon');
+    const conditionText = overallCondition.querySelector('.condition-text');
+    
+    if (conditionIcon) conditionIcon.textContent = '⚖️';
+    if (conditionText) {
+      conditionText.innerHTML = `<h3>${translateText('fairFarmingConditions')}</h3><p>${translateText('weatherConditionsSuitableWithAdjustments')}</p>`;
+    }
+    console.log('🚀 [FORCE] Overall condition updated successfully');
+  } else {
+    console.error('🚀 [FORCE] overallCondition not found!');
+  }
+  
+  console.log('🚀 [FORCE] Forced dashboard update completed');
+  
+  // Dispatch language change event to ensure translations are applied
+  document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: getCurrentLanguage() } }));
 }
 
 // Initialize WebSocket connection

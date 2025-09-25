@@ -15,6 +15,23 @@
         <div class="gradient-overlay"></div>
     </div>
 
+    <!-- Language Selector -->
+    <div class="language-selector">
+      <select id="languageSelect" onchange="changeLanguage()">
+        <option value="en">English</option>
+        <option value="hi">हिंदी (Hindi)</option>
+        <option value="ta">தமிழ் (Tamil)</option>
+        <option value="te">తెలుగు (Telugu)</option>
+        <option value="mr">मराठी (Marathi)</option>
+        <option value="bn">বাংলা (Bengali)</option>
+        <option value="gu">ગુજરાતી (Gujarati)</option>
+        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+        <option value="ml">മലയാളം (Malayalam)</option>
+        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+        <option value="ur">اردو (Urdu)</option>
+      </select>
+    </div>
+
     <!-- Header Section -->
     <header class="main-header">
         <div class="header-content">
@@ -23,13 +40,13 @@
                     <i class="fas fa-shield-alt"></i>
                 </div>
                 <div class="logo-text">
-                    <h1>Environmental Alerts</h1>
-                    <p>AI-Powered Climate Risk Monitoring</p>
+                    <h1 data-i18n="environmentalAlerts">Environmental Alerts</h1>
+                    <p data-i18n="aiPoweredMonitoring">AI-Powered Climate Risk Monitoring</p>
                 </div>
             </div>
             <div class="status-indicator">
                 <div class="status-dot"></div>
-                <span>Real-time Monitoring</span>
+                <span data-i18n="realTimeMonitoring">Real-time Monitoring</span>
             </div>
         </div>
     </header>
@@ -39,11 +56,11 @@
         <div class="nav-container">
             <a href="index.html" class="nav-button">
                 <i class="fas fa-cloud-sun"></i>
-                <span>Weather Dashboard</span>
+                <span data-i18n="weatherDashboard">Weather Dashboard</span>
             </a>
             <a href="farming.html" class="nav-button">
                 <i class="fas fa-seedling"></i>
-                <span>Farmer's Dashboard</span>
+                <span data-i18n="farmersDashboard">Farmer's Dashboard</span>
             </a>
         </div>
     </nav>
@@ -53,15 +70,15 @@
         <!-- Location Search Section -->
         <section class="location-search-section">
             <div class="search-container">
-                <h2><i class="fas fa-map-marker-alt"></i> Select Your Location</h2>
+                <h2><i class="fas fa-map-marker-alt"></i> <span data-i18n="selectYourLocation">Select Your Location</span></h2>
                 <div class="search-controls">
                     <div class="location-search-wrapper">
                         <div class="search-input-container">
                             <i class="fas fa-search search-icon"></i>
-                            <input type="text" id="locationSearch" class="location-search" placeholder="Search small towns, villages, or any location..." autocomplete="off">
+                            <input type="text" id="locationSearch" class="location-search" data-i18n="searchPlaceholder" placeholder="Search small towns, villages, or any location..." autocomplete="off">
                             <button id="searchBtn" class="search-btn" onclick="searchLocation()">
                                 <i class="fas fa-globe"></i>
-                                <span>Search</span>
+                                <span data-i18n="search">Search</span>
                             </button>
                         </div>
                         <div id="searchResults" class="search-results" style="display: none;"></div>
@@ -69,7 +86,7 @@
                     <div class="current-location-info">
                         <div class="location-display">
                             <span class="location-icon">📍</span>
-                            <span class="location-name" id="currentLocationName">Select a location</span>
+                            <span class="location-name" id="currentLocationName" data-i18n="selectLocation">Select a location</span>
                             <span class="location-type" id="currentLocationType"></span>
                         </div>
                     </div>
@@ -79,19 +96,19 @@
 
         <!-- Current Weather & Environmental Conditions -->
         <section class="environmental-conditions-section">
-            <h2><i class="fas fa-thermometer-half"></i> Current Environmental Conditions</h2>
+            <h2><i class="fas fa-thermometer-half"></i> <span data-i18n="currentEnvironmentalConditions">Current Environmental Conditions</span></h2>
             <div class="environmental-grid">
                 <!-- Temperature Card -->
                 <div class="env-card temperature-card">
                     <div class="env-card-header">
                         <div class="env-icon">🌡️</div>
-                        <h3>Temperature</h3>
+                        <h3 data-i18n="temperature">Temperature</h3>
                     </div>
                     <div class="env-value" id="envTemperature">--°C</div>
-                    <div class="env-status" id="envTempStatus">Loading...</div>
+                    <div class="env-status" id="envTempStatus" data-i18n="loading">Loading...</div>
                     <div class="temp-range">
-                        <span>Min: <span id="tempMin">--</span>°C</span>
-                        <span>Max: <span id="tempMax">--</span>°C</span>
+                        <span data-i18n="min">Min: <span id="tempMin">--</span>°C</span>
+                        <span data-i18n="max">Max: <span id="tempMax">--</span>°C</span>
                     </div>
                 </div>
 
@@ -99,10 +116,10 @@
                 <div class="env-card humidity-card">
                     <div class="env-card-header">
                         <div class="env-icon">💧</div>
-                        <h3>Humidity</h3>
+                        <h3 data-i18n="humidity">Humidity</h3>
                     </div>
                     <div class="env-value" id="envHumidity">--%</div>
-                    <div class="env-status" id="envHumidityStatus">Loading...</div>
+                    <div class="env-status" id="envHumidityStatus" data-i18n="loading">Loading...</div>
                     <div class="humidity-visual">
                         <div class="humidity-bar">
                             <div class="humidity-fill" id="humidityFillBar"></div>
@@ -114,10 +131,10 @@
                 <div class="env-card rainfall-card">
                     <div class="env-card-header">
                         <div class="env-icon">🌧️</div>
-                        <h3>Rainfall</h3>
+                        <h3 data-i18n="rainfall">Rainfall</h3>
                     </div>
                     <div class="env-value" id="envRainfall">-- mm</div>
-                    <div class="env-status" id="envRainfallStatus">Loading...</div>
+                    <div class="env-status" id="envRainfallStatus" data-i18n="loading">Loading...</div>
                     <div class="rainfall-indicator">
                         <div class="rain-level" id="rainLevelIndicator"></div>
                     </div>
@@ -127,10 +144,10 @@
                 <div class="env-card air-quality-card">
                     <div class="env-card-header">
                         <div class="env-icon">🌫️</div>
-                        <h3>Air Quality</h3>
+                        <h3 data-i18n="airQuality">Air Quality</h3>
                     </div>
                     <div class="env-value" id="envAQI">--</div>
-                    <div class="env-status" id="envAQIStatus">Loading...</div>
+                    <div class="env-status" id="envAQIStatus" data-i18n="loading">Loading...</div>
                     <div class="aqi-indicator">
                         <div class="aqi-level" id="aqiLevelIndicator"></div>
                     </div>
@@ -140,18 +157,18 @@
         <!-- AI Predictions Section -->
         <section class="ml-predictions-section">
             <div class="section-header">
-                <h2><i class="fas fa-brain"></i> AI Environmental Predictions</h2>
+                <h2><i class="fas fa-brain"></i> <span data-i18n="aiEnvironmentalPredictions">AI Environmental Predictions</span></h2>
                 <div class="ml-controls">
                     <div class="select-wrapper">
                         <select id="citySelect" class="city-select">
-                            <option value="">🏡 Select a small town/village</option>
+                            <option value="" data-i18n="selectSmallTown">🏡 Select a small town/village</option>
                             <!-- Small towns will be loaded dynamically -->
                         </select>
                         <i class="fas fa-chevron-down select-arrow"></i>
                     </div>
                     <button id="generateAlertsBtn" class="predict-btn btn-instant-response" onclick="loadAlertPredictions()">
                         <i class="fas fa-magic"></i>
-                        <span>Predict Alerts</span>
+                        <span data-i18n="predictAlerts">Predict Alerts</span>
                         <div class="btn-glow"></div>
                     </button>
                 </div>
@@ -164,8 +181,8 @@
         <!-- Alert Cards Grid -->
         <section class="alerts-grid">
             <div class="grid-header">
-                <h2>🚨 Current Alert Status</h2>
-                <p>Monitor real-time environmental conditions and risks</p>
+                <h2>🚨 <span data-i18n="currentAlertStatus">Current Alert Status</span></h2>
+                <p data-i18n="monitorConditions">Monitor real-time environmental conditions and risks</p>
             </div>
 
             <div class="alert-cards-container">
@@ -181,8 +198,8 @@
                             <div class="icon-glow heatwave-glow"></div>
                         </div>
                         <div class="alert-title-section">
-                            <h3 class="alert-title">Heatwave Alert</h3>
-                            <div class="alert-badge high-risk">High Risk</div>
+                            <h3 class="alert-title" data-i18n="heatwaveAlert">Heatwave Alert</h3>
+                            <div class="alert-badge high-risk" data-i18n="highRisk">High Risk</div>
                         </div>
                     </div>
                     <div class="alert-content">
@@ -190,26 +207,26 @@
                             <div class="stat-item">
                                 <i class="fas fa-temperature-high"></i>
                                 <span class="stat-value">38°C</span>
-                                <span class="stat-label">Current</span>
+                                <span class="stat-label" data-i18n="current">Current</span>
                             </div>
                             <div class="stat-item">
                                 <i class="fas fa-clock"></i>
                                 <span class="stat-value">7 days</span>
-                                <span class="stat-label">Duration</span>
+                                <span class="stat-label" data-i18n="duration">Duration</span>
                             </div>
                         </div>
                         <div class="alert-info" id="heatwave-info">
-                            <p>Loading comprehensive heatwave analysis...</p>
+                            <p data-i18n="loadingComprehensiveHeatwaveAnalysis">Loading comprehensive heatwave analysis...</p>
                         </div>
                     </div>
                     <div class="alert-actions">
                         <button class="action-btn primary" onclick="getHeatwaveAlert()">
                             <i class="fas fa-search"></i>
-                            <span>Analyze Risk</span>
+                            <span data-i18n="analyzeRisk">Analyze Risk</span>
                         </button>
                         <button class="action-btn secondary">
                             <i class="fas fa-bell"></i>
-                            <span>Set Alert</span>
+                            <span data-i18n="setAlert">Set Alert</span>
                         </button>
                     </div>
                 </div>
@@ -226,8 +243,8 @@
                             <div class="icon-glow flood-glow"></div>
                         </div>
                         <div class="alert-title-section">
-                            <h3 class="alert-title">Flood Prediction</h3>
-                            <div class="alert-badge moderate-risk">Moderate Risk</div>
+                            <h3 class="alert-title" data-i18n="floodPrediction">Flood Prediction</h3>
+                            <div class="alert-badge moderate-risk" data-i18n="moderateRisk">Moderate Risk</div>
                         </div>
                     </div>
                     <div class="alert-content">
@@ -235,26 +252,26 @@
                             <div class="stat-item">
                                 <i class="fas fa-tint"></i>
                                 <span class="stat-value">9.5m</span>
-                                <span class="stat-label">River Level</span>
+                                <span class="stat-label" data-i18n="riverLevel">River Level</span>
                             </div>
                             <div class="stat-item">
                                 <i class="fas fa-clock"></i>
                                 <span class="stat-value">48h</span>
-                                <span class="stat-label">Peak Time</span>
+                                <span class="stat-label" data-i18n="peakTime">Peak Time</span>
                             </div>
                         </div>
                         <div class="alert-info" id="flood-info">
-                            <p>Loading flood prediction models...</p>
+                            <p data-i18n="loadingFloodPredictionModels">Loading flood prediction models...</p>
                         </div>
                     </div>
                     <div class="alert-actions">
                         <button class="action-btn primary" onclick="getFloodPrediction()">
                             <i class="fas fa-waves"></i>
-                            <span>Check Status</span>
+                            <span data-i18n="checkStatus">Check Status</span>
                         </button>
                         <button class="action-btn secondary">
                             <i class="fas fa-map"></i>
-                            <span>View Map</span>
+                            <span data-i18n="viewMap">View Map</span>
                         </button>
                     </div>
                 </div>
@@ -271,8 +288,8 @@
                             <div class="icon-glow drought-glow"></div>
                         </div>
                         <div class="alert-title-section">
-                            <h3 class="alert-title">Drought Warning</h3>
-                            <div class="alert-badge low-risk">Low Risk</div>
+                            <h3 class="alert-title" data-i18n="droughtWarning">Drought Warning</h3>
+                            <div class="alert-badge low-risk" data-i18n="lowRisk">Low Risk</div>
                         </div>
                     </div>
                     <div class="alert-content">
@@ -280,26 +297,26 @@
                             <div class="stat-item">
                                 <i class="fas fa-percentage"></i>
                                 <span class="stat-value">12%</span>
-                                <span class="stat-label">Soil Moisture</span>
+                                <span class="stat-label" data-i18n="soilMoisture">Soil Moisture</span>
                             </div>
                             <div class="stat-item">
                                 <i class="fas fa-calendar"></i>
                                 <span class="stat-value">3 months</span>
-                                <span class="stat-label">Duration</span>
+                                <span class="stat-label" data-i18n="duration">Duration</span>
                             </div>
                         </div>
                         <div class="alert-info" id="drought-info">
-                            <p>Loading drought assessment data...</p>
+                            <p data-i18n="loadingDroughtAssessmentData">Loading drought assessment data...</p>
                         </div>
                     </div>
                     <div class="alert-actions">
                         <button class="action-btn primary" onclick="getDroughtWarning()">
                             <i class="fas fa-sun"></i>
-                            <span>Assess Risk</span>
+                            <span data-i18n="assessRisk">Assess Risk</span>
                         </button>
                         <button class="action-btn secondary">
                             <i class="fas fa-chart-area"></i>
-                            <span>View Trends</span>
+                            <span data-i18n="viewTrends">View Trends</span>
                         </button>
                     </div>
                 </div>
@@ -316,8 +333,8 @@
                             <div class="icon-glow coastal-glow"></div>
                         </div>
                         <div class="alert-title-section">
-                            <h3 class="alert-title">Coastal Monitoring</h3>
-                            <div class="alert-badge medium-risk">Medium Risk</div>
+                            <h3 class="alert-title" data-i18n="coastalMonitoring">Coastal Monitoring</h3>
+                            <div class="alert-badge medium-risk" data-i18n="mediumRisk">Medium Risk</div>
                         </div>
                     </div>
                     <div class="alert-content">
@@ -325,26 +342,26 @@
                             <div class="stat-item">
                                 <i class="fas fa-arrow-up"></i>
                                 <span class="stat-value">1.2m</span>
-                                <span class="stat-label">Storm Surge</span>
+                                <span class="stat-label" data-i18n="stormSurge">Storm Surge</span>
                             </div>
                             <div class="stat-item">
                                 <i class="fas fa-water"></i>
                                 <span class="stat-value">4m</span>
-                                <span class="stat-label">Wave Height</span>
+                                <span class="stat-label" data-i18n="waveHeight">Wave Height</span>
                             </div>
                         </div>
                         <div class="alert-info" id="coastal-info">
-                            <p>Loading coastal monitoring systems...</p>
+                            <p data-i18n="loadingCoastalMonitoringSystems">Loading coastal monitoring systems...</p>
                         </div>
                     </div>
                     <div class="alert-actions">
                         <button class="action-btn primary" onclick="getCoastalMonitoring()">
                             <i class="fas fa-binoculars"></i>
-                            <span>Monitor Coast</span>
+                            <span data-i18n="monitorCoast">Monitor Coast</span>
                         </button>
                         <button class="action-btn secondary">
                             <i class="fas fa-satellite"></i>
-                            <span>Satellite View</span>
+                            <span data-i18n="satelliteView">Satellite View</span>
                         </button>
                     </div>
                 </div>
@@ -449,8 +466,8 @@
                         <div class="spinner-ring"></div>
                         <div class="spinner-ring"></div>
                     </div>
-                    <h3>Climate-Sync Loading...</h3>
-                    <p id="loadingMessage">Initializing dashboard...</p>
+                    <h3 data-i18n="climateSyncLoading">Climate-Sync Loading...</h3>
+                    <p id="loadingMessage" data-i18n="initializingDashboard">Initializing dashboard...</p>
                     <div class="loading-progress">
                         <div class="progress-bar" id="loadingProgress"></div>
                     </div>
@@ -617,9 +634,9 @@
             warningDiv.innerHTML = `
                 <div class="notice-content">
                     <i class="fas fa-flask"></i>
-                    <span>Running in sample data mode - Real data unavailable</span>
+                    <span data-i18n="runningInSampleDataMode">Running in sample data mode - Real data unavailable</span>
                     <button onclick="retryRealData()" class="retry-btn">
-                        <i class="fas fa-sync-alt"></i> Retry
+                        <i class="fas fa-sync-alt"></i> <span data-i18n="retry">Retry</span>
                     </button>
                 </div>
             `;
@@ -1154,7 +1171,7 @@
                             <div class="probability-circle" style="background: conic-gradient(${probabilityColor} ${alert.probability * 360}deg, #e0e0e0 0deg)">
                                 <div class="probability-inner">
                                     <span class="probability-value">${(alert.probability * 100).toFixed(0)}%</span>
-                                    <span class="probability-label">Probability</span>
+                                    <span class="probability-label" data-i18n="probability">Probability</span>
                                 </div>
                             </div>
                         </div>
@@ -1198,7 +1215,7 @@
         // Existing functions
         function getHeatwaveAlert() {
             document.getElementById('heatwave-info').innerHTML = `
-                <strong>Heatwave Alert:</strong><br>
+                <strong data-i18n="heatwaveAlertDetails">Heatwave Alert:</strong><br>
                 Current temperature: 38°C<br>
                 Heatwave risk level: High<br>
                 Duration: 7 days<br>
@@ -1209,7 +1226,7 @@
 
         function getFloodPrediction() {
             document.getElementById('flood-info').innerHTML = `
-                <strong>Flood Prediction:</strong><br>
+                <strong data-i18n="floodPredictionDetails">Flood Prediction:</strong><br>
                 River level: 9.5m (critical: 10m)<br>
                 Risk level: Moderate<br>
                 Expected peak: 48 hours
@@ -1237,6 +1254,25 @@
             document.querySelector('.coastal').classList.add('active');
         }
     </script>
+  <script src="languages.js"></script>
+  <script>
+    // Language change function
+    function changeLanguage() {
+      const select = document.getElementById('languageSelect');
+      const selectedLang = select.value;
+      setLanguage(selectedLang);
+      // Dispatch custom event for other scripts to react
+      document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: selectedLang } }));
+    }
+    
+    // Set language selector to current language on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const currentLang = getCurrentLanguage();
+      document.getElementById('languageSelect').value = currentLang;
+      // Update language on page load
+      updateLanguage(currentLang);
+    });
+  </script>
 </body>
 
 <!-- Dashboard Status Indicator -->

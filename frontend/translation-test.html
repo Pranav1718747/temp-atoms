@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Test - ClimateSync</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .language-selector {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: none;
+            background: white;
+            color: #333;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        .key {
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+        .translation {
+            margin-left: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.3);
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 ClimateSync Translation Test</h1>
+        
+        <div class="language-selector">
+            <label for="languageSelect">Select Language:</label>
+            <select id="languageSelect" onchange="changeLanguage()">
+                <option value="en">English</option>
+                <option value="hi">हिंदी (Hindi)</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+                <option value="gu">ગુજરાતી (Gujarati)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                <option value="ml">മലയാളം (Malayalam)</option>
+                <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                <option value="ur">اردو (Urdu)</option>
+            </select>
+        </div>
+
+        <div class="status" id="status">
+            ✅ Translation system loaded successfully!
+        </div>
+
+        <div class="test-section">
+            <h2>🏠 Basic Interface Elements</h2>
+            <div class="test-item">
+                <span class="key">climate:</span>
+                <span class="translation" data-i18n="climate">Climate</span>
+            </div>
+            <div class="test-item">
+                <span class="key">sync:</span>
+                <span class="translation" data-i18n="sync">Sync</span>
+            </div>
+            <div class="test-item">
+                <span class="key">subtitle:</span>
+                <span class="translation" data-i18n="subtitle">Live Weather Dashboard</span>
+            </div>
+            <div class="test-item">
+                <span class="key">search:</span>
+                <span class="translation" data-i18n="search">Search</span>
+            </div>
+            <div class="test-item">
+                <span class="key">refresh:</span>
+                <span class="translation" data-i18n="refresh">Refresh</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🌤️ Weather Elements</h2>
+            <div class="test-item">
+                <span class="key">temperature:</span>
+                <span class="translation" data-i18n="temperature">Temperature</span>
+            </div>
+            <div class="test-item">
+                <span class="key">humidity:</span>
+                <span class="translation" data-i18n="humidity">Humidity</span>
+            </div>
+            <div class="test-item">
+                <span class="key">rainfall:</span>
+                <span class="translation" data-i18n="rainfall">Rainfall</span>
+            </div>
+            <div class="test-item">
+                <span class="key">wind:</span>
+                <span class="translation" data-i18n="wind">Wind</span>
+            </div>
+            <div class="test-item">
+                <span class="key">pressure:</span>
+                <span class="translation" data-i18n="pressure">Pressure</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🌾 Farming Elements</h2>
+            <div class="test-item">
+                <span class="key">smartFarmingDashboard:</span>
+                <span class="translation" data-i18n="smartFarmingDashboard">Smart Farming Dashboard</span>
+            </div>
+            <div class="test-item">
+                <span class="key">selectYourCrop:</span>
+                <span class="translation" data-i18n="selectYourCrop">Select Your Crop</span>
+            </div>
+            <div class="test-item">
+                <span class="key">growthStage:</span>
+                <span class="translation" data-i18n="growthStage">Growth Stage</span>
+            </div>
+            <div class="test-item">
+                <span class="key">seedling:</span>
+                <span class="translation" data-i18n="seedling">Seedling</span>
+            </div>
+            <div class="test-item">
+                <span class="key">harvest:</span>
+                <span class="translation" data-i18n="harvest">Harvest</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🚨 Alert Elements</h2>
+            <div class="test-item">
+                <span class="key">environmentalAlerts:</span>
+                <span class="translation" data-i18n="environmentalAlerts">Environmental Alerts</span>
+            </div>
+            <div class="test-item">
+                <span class="key">heatwaveAlert:</span>
+                <span class="translation" data-i18n="heatwaveAlert">Heatwave Alert</span>
+            </div>
+            <div class="test-item">
+                <span class="key">floodPrediction:</span>
+                <span class="translation" data-i18n="floodPrediction">Flood Prediction</span>
+            </div>
+            <div class="test-item">
+                <span class="key">droughtWarning:</span>
+                <span class="translation" data-i18n="droughtWarning">Drought Warning</span>
+            </div>
+            <div class="test-item">
+                <span class="key">highRisk:</span>
+                <span class="translation" data-i18n="highRisk">High Risk</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Dynamic Content Test</h2>
+            <div class="test-item">
+                <span class="key">Dynamic Translation Test:</span>
+                <span class="translation" id="dynamicTest">Click button to test</span>
+            </div>
+            <button onclick="testDynamicTranslation()" style="padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; background: #4caf50; color: white; cursor: pointer;">
+                Test Dynamic Translation
+            </button>
+        </div>
+    </div>
+
+    <script src="languages.js"></script>
+    <script>
+        // Language change function
+        function changeLanguage() {
+            const select = document.getElementById('languageSelect');
+            const selectedLang = select.value;
+            setLanguage(selectedLang);
+            
+            // Update status
+            document.getElementById('status').textContent = `✅ Language changed to: ${selectedLang.toUpperCase()}`;
+        }
+        
+        // Test dynamic translation
+        function testDynamicTranslation() {
+            const testKeys = [
+                'loadingFarmingConditions',
+                'pleaseWaitAnalyzeWeather',
+                'aiAnalysisReady',
+                'foundLocations',
+                'noLocationsFound'
+            ];
+            
+            const randomKey = testKeys[Math.floor(Math.random() * testKeys.length)];
+            const translation = translateText(randomKey);
+            
+            document.getElementById('dynamicTest').textContent = 
+                `${randomKey}: "${translation}"`;
+        }
+        
+        // Set language selector to current language on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentLang = getCurrentLanguage();
+            document.getElementById('languageSelect').value = currentLang;
+            updateLanguage(currentLang);
+            
+            // Test dynamic translation on load
+            testDynamicTranslation();
+        });
+    </script>
+</body>
+</html>

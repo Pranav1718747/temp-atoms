@@ -26,19 +26,36 @@
 
   <!-- Main Container -->
   <div class="container">
+    <!-- Language Selector -->
+    <div class="language-selector">
+      <select id="languageSelect" onchange="changeLanguage()">
+        <option value="en">English</option>
+        <option value="hi">हिंदी (Hindi)</option>
+        <option value="ta">தமிழ் (Tamil)</option>
+        <option value="te">తెలుగు (Telugu)</option>
+        <option value="mr">मराठी (Marathi)</option>
+        <option value="bn">বাংলা (Bengali)</option>
+        <option value="gu">ગુજરાતી (Gujarati)</option>
+        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+        <option value="ml">മലയാളം (Malayalam)</option>
+        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+        <option value="ur">اردو (Urdu)</option>
+      </select>
+    </div>
+
     <!-- Header Section -->
     <header class="header">
       <div class="header-content">
         <div class="logo">
           <i class="fas fa-cloud-sun weather-icon"></i>
           <h1 class="title">
-            <span class="climate">Climate</span><span class="sync">Sync</span>
-            <span class="subtitle">Live Weather Dashboard</span>
+            <span class="climate" data-i18n="climate">Climate</span><span class="sync" data-i18n="sync">Sync</span>
+            <span class="subtitle" data-i18n="subtitle">Live Weather Dashboard</span>
           </h1>
         </div>
         <div class="live-indicator">
           <span class="pulse-dot"></span>
-          <span class="live-text">LIVE</span>
+          <span class="live-text" data-i18n="live">LIVE</span>
         </div>
       </div>
     </header>
@@ -50,10 +67,10 @@
         <div class="location-search-container">
           <div class="search-wrapper">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" id="locationSearch" class="location-search" placeholder="Search any city, village, or location worldwide..." autocomplete="off">
+            <input type="text" id="locationSearch" class="location-search" data-i18n="searchPlaceholder" placeholder="Search any city, village, or location worldwide..." autocomplete="off">
             <button id="searchBtn" class="search-btn" onclick="searchLocation()">
               <i class="fas fa-globe"></i>
-              <span>Search</span>
+              <span data-i18n="search">Search</span>
             </button>
           </div>
           <!-- Search Results Dropdown -->
@@ -62,19 +79,19 @@
         
         <button id="refreshBtn" class="refresh-btn" onclick="refreshWeather()">
           <i class="fas fa-sync-alt"></i>
-          <span>Refresh</span>
+          <span data-i18n="refresh">Refresh</span>
         </button>
         <a href="alerts.html" class="alerts-link">
           <i class="fas fa-bell"></i>
-          <span>Environmental Alerts</span>
+          <span data-i18n="environmentalAlerts">Environmental Alerts</span>
         </a>
         <a href="farming.html" class="farming-link">
           <i class="fas fa-tractor"></i>
-          <span>Farming Dashboard</span>
+          <span data-i18n="farmingDashboard">Farming Dashboard</span>
         </a>
         <a href="farmer-profit-dashboard.html" class="profit-link">
           <i class="fas fa-calculator"></i>
-          <span>Farmer Profit Calculator</span>
+          <span data-i18n="farmerProfitCalculator">Farmer Profit Calculator</span>
         </a>
       </div>
     </section>
@@ -105,11 +122,11 @@
         <div class="weather-card temperature-card">
           <div class="card-header">
             <i class="fas fa-thermometer-half card-icon"></i>
-            <h3 class="card-title">Temperature</h3>
+            <h3 class="card-title" data-i18n="temperature">Temperature</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="temp">--°C</div>
-            <div class="card-subtitle">Current Temperature</div>
+            <div class="card-subtitle" data-i18n="currentTemperature">Current Temperature</div>
           </div>
           <div class="card-decoration">
             <div class="gradient-circle"></div>
@@ -120,11 +137,11 @@
         <div class="weather-card humidity-card">
           <div class="card-header">
             <i class="fas fa-tint card-icon"></i>
-            <h3 class="card-title">Humidity</h3>
+            <h3 class="card-title" data-i18n="humidity">Humidity</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="humidity">--%</div>
-            <div class="card-subtitle">Moisture Level</div>
+            <div class="card-subtitle" data-i18n="moistureLevel">Moisture Level</div>
           </div>
           <div class="progress-ring">
             <svg class="progress-svg" width="80" height="80">
@@ -138,11 +155,11 @@
         <div class="weather-card rainfall-card">
           <div class="card-header">
             <i class="fas fa-cloud-rain card-icon"></i>
-            <h3 class="card-title">Rainfall</h3>
+            <h3 class="card-title" data-i18n="rainfall">Rainfall</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="rain">-- mm</div>
-            <div class="card-subtitle">Last Hour</div>
+            <div class="card-subtitle" data-i18n="lastHour">Last Hour</div>
           </div>
           <div class="rain-animation">
             <div class="raindrop"></div>
@@ -155,11 +172,11 @@
         <div class="weather-card description-card">
           <div class="card-header">
             <i class="fas fa-eye card-icon"></i>
-            <h3 class="card-title">Conditions</h3>
+            <h3 class="card-title" data-i18n="conditions">Conditions</h3>
           </div>
           <div class="card-content">
             <div class="main-value description-text" id="desc">--</div>
-            <div class="card-subtitle">Weather Description</div>
+            <div class="card-subtitle" data-i18n="weatherDescription">Weather Description</div>
           </div>
           <div class="weather-icon-display">
             <i class="fas fa-sun weather-display-icon" id="weatherIcon"></i>
@@ -172,11 +189,11 @@
         <div class="weather-card wind-card">
           <div class="card-header">
             <i class="fas fa-wind card-icon"></i>
-            <h3 class="card-title">Wind</h3>
+            <h3 class="card-title" data-i18n="wind">Wind</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="windSpeed">-- km/h</div>
-            <div class="card-subtitle" id="windDirection">Direction: --</div>
+            <div class="card-subtitle" id="windDirection" data-i18n="direction">Direction: --</div>
           </div>
           <div class="wind-animation">
             <div class="wind-indicator" id="windIndicator"></div>
@@ -187,11 +204,11 @@
         <div class="weather-card pressure-card">
           <div class="card-header">
             <i class="fas fa-tachometer-alt card-icon"></i>
-            <h3 class="card-title">Pressure</h3>
+            <h3 class="card-title" data-i18n="pressure">Pressure</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="pressure">-- hPa</div>
-            <div class="card-subtitle" id="pressureTrend">Trend: --</div>
+            <div class="card-subtitle" id="pressureTrend" data-i18n="trend">Trend: --</div>
           </div>
           <div class="pressure-gauge">
             <div class="gauge-fill" id="pressureGauge"></div>
@@ -202,11 +219,11 @@
         <div class="weather-card uv-card">
           <div class="card-header">
             <i class="fas fa-sun card-icon"></i>
-            <h3 class="card-title">UV Index</h3>
+            <h3 class="card-title" data-i18n="uvIndex">UV Index</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="uvIndex">--</div>
-            <div class="card-subtitle" id="uvLevel">Level: --</div>
+            <div class="card-subtitle" id="uvLevel" data-i18n="level">Level: --</div>
           </div>
           <div class="uv-indicator">
             <div class="uv-bar" id="uvBar"></div>
@@ -217,11 +234,11 @@
         <div class="weather-card feels-like-card">
           <div class="card-header">
             <i class="fas fa-thermometer-three-quarters card-icon"></i>
-            <h3 class="card-title">Feels Like</h3>
+            <h3 class="card-title" data-i18n="feelsLike">Feels Like</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="feelsLike">--°C</div>
-            <div class="card-subtitle">Apparent Temperature</div>
+            <div class="card-subtitle" data-i18n="apparentTemperature">Apparent Temperature</div>
           </div>
           <div class="feels-like-animation">
             <div class="temperature-wave"></div>
@@ -230,15 +247,13 @@
       </div>
     </section>
 
-
-
     <!-- Weather Forecast Section -->
     <section class="forecast-section" id="forecastSection" style="display: none;">
       <div class="forecast-header">
-        <h2><i class="fas fa-calendar-alt"></i> Weather Forecast</h2>
+        <h2><i class="fas fa-calendar-alt"></i> <span data-i18n="weatherForecast">Weather Forecast</span></h2>
         <div class="forecast-tabs">
-          <button class="forecast-tab active" onclick="showHourlyForecast()">Hourly</button>
-          <button class="forecast-tab" onclick="showDailyForecast()">Daily</button>
+          <button class="forecast-tab active" onclick="showHourlyForecast()" data-i18n="hourly">Hourly</button>
+          <button class="forecast-tab" onclick="showDailyForecast()" data-i18n="daily">Daily</button>
         </div>
       </div>
       
@@ -260,18 +275,18 @@
     <!-- Agricultural Data Section -->
     <section class="agricultural-section" id="agriculturalSection" style="display: none;">
       <div class="agricultural-header">
-        <h2><i class="fas fa-seedling"></i> Agricultural Weather Data</h2>
+        <h2><i class="fas fa-seedling"></i> <span data-i18n="agriculturalWeatherData">Agricultural Weather Data</span></h2>
       </div>
       <div class="agricultural-grid">
         <!-- Soil Temperature Card -->
         <div class="weather-card soil-temp-card">
           <div class="card-header">
             <i class="fas fa-thermometer-empty card-icon"></i>
-            <h3 class="card-title">Soil Temperature</h3>
+            <h3 class="card-title" data-i18n="soilTemperature">Soil Temperature</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="soilTemp">--°C</div>
-            <div class="card-subtitle">0-7cm depth</div>
+            <div class="card-subtitle" data-i18n="cmDepth">0-7cm depth</div>
           </div>
         </div>
         
@@ -279,11 +294,11 @@
         <div class="weather-card soil-moisture-card">
           <div class="card-header">
             <i class="fas fa-tint card-icon"></i>
-            <h3 class="card-title">Soil Moisture</h3>
+            <h3 class="card-title" data-i18n="soilMoisture">Soil Moisture</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="soilMoisture">-- m³/m³</div>
-            <div class="card-subtitle">0-7cm depth</div>
+            <div class="card-subtitle" data-i18n="cmDepth">0-7cm depth</div>
           </div>
         </div>
         
@@ -291,11 +306,11 @@
         <div class="weather-card evapotranspiration-card">
           <div class="card-header">
             <i class="fas fa-leaf card-icon"></i>
-            <h3 class="card-title">Evapotranspiration</h3>
+            <h3 class="card-title" data-i18n="evapotranspiration">Evapotranspiration</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="evapotranspiration">-- mm</div>
-            <div class="card-subtitle">Reference ET₀</div>
+            <div class="card-subtitle" data-i18n="referenceETO">Reference ET₀</div>
           </div>
         </div>
         
@@ -303,11 +318,11 @@
         <div class="weather-card precipitation-prob-card">
           <div class="card-header">
             <i class="fas fa-cloud-rain card-icon"></i>
-            <h3 class="card-title">Rain Probability</h3>
+            <h3 class="card-title" data-i18n="rainProbability">Rain Probability</h3>
           </div>
           <div class="card-content">
             <div class="main-value" id="precipitationProb">--%</div>
-            <div class="card-subtitle">Next 24 hours</div>
+            <div class="card-subtitle" data-i18n="next24Hours">Next 24 hours</div>
           </div>
         </div>
       </div>
@@ -318,15 +333,15 @@
       <div class="data-info-card" id="dataInfo">
         <div class="info-row">
           <i class="fas fa-database info-icon"></i>
-          <span id="dataSource" class="info-text">Loading...</span>
+          <span id="dataSource" class="info-text" data-i18n="loading">Loading...</span>
         </div>
         <div class="info-row">
           <i class="fas fa-clock info-icon"></i>
-          <span id="lastUpdated" class="info-text">Last updated: --</span>
+          <span id="lastUpdated" class="info-text" data-i18n="lastUpdated">Last updated: --</span>
         </div>
         <div class="info-row">
           <i class="fas fa-globe info-icon"></i>
-          <span id="locationInfo" class="info-text">Location: Global</span>
+          <span id="locationInfo" class="info-text" data-i18n="location">Location: <span data-i18n="global">Global</span></span>
         </div>
       </div>
     </section>
@@ -339,9 +354,28 @@
       <div class="spinner-ring"></div>
       <div class="spinner-ring"></div>
     </div>
-    <p class="loading-text">Fetching Weather Data...</p>
+    <p class="loading-text" data-i18n="fetching">Fetching Weather Data...</p>
   </div>
 
+  <script src="languages.js"></script>
   <script src="script.js"></script>
+  <script>
+    // Language change function
+    function changeLanguage() {
+      const select = document.getElementById('languageSelect');
+      const selectedLang = select.value;
+      setLanguage(selectedLang);
+      // Dispatch custom event for other scripts to react
+      document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: selectedLang } }));
+    }
+    
+    // Set language selector to current language on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const currentLang = getCurrentLanguage();
+      document.getElementById('languageSelect').value = currentLang;
+      // Update language on page load
+      updateLanguage(currentLang);
+    });
+  </script>
 </body>
 </html>

@@ -12,29 +12,46 @@
   <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
 </head>
 <body>
+  <!-- Language Selector -->
+  <div class="language-selector">
+    <select id="languageSelect" onchange="changeLanguage()">
+      <option value="en">English</option>
+      <option value="hi">हिंदी (Hindi)</option>
+      <option value="ta">தமிழ் (Tamil)</option>
+      <option value="te">తెలుగు (Telugu)</option>
+      <option value="mr">मराठी (Marathi)</option>
+      <option value="bn">বাংলা (Bengali)</option>
+      <option value="gu">ગુજરાતી (Gujarati)</option>
+      <option value="kn">ಕನ್ನಡ (Kannada)</option>
+      <option value="ml">മലയാളം (Malayalam)</option>
+      <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+      <option value="ur">اردو (Urdu)</option>
+    </select>
+  </div>
+
   <!-- Navigation -->
   <nav class="navigation">
     <div class="nav-container">
       <div class="nav-logo">
         <i class="fas fa-seedling"></i>
-        <span>ClimateSync Farming</span>
+        <span data-i18n="climateSyncFarming">ClimateSync Farming</span>
       </div>
       <div class="nav-links">
         <a href="index.html" class="nav-link">
           <i class="fas fa-cloud-sun"></i>
-          Weather Dashboard
+          <span data-i18n="weatherDashboard">Weather Dashboard</span>
         </a>
         <a href="farming.html" class="nav-link active">
           <i class="fas fa-tractor"></i>
-          Farming Dashboard
+          <span data-i18n="farmingDashboard">Farming Dashboard</span>
         </a>
         <a href="farmer-profit-dashboard.html" class="nav-link">
           <i class="fas fa-calculator"></i>
-          Profit Calculator
+          <span data-i18n="profitCalculator">Profit Calculator</span>
         </a>
         <a href="crop-animation-demo.html" class="nav-link">
           <i class="fas fa-seedling"></i>
-          Crop Animations
+          <span data-i18n="cropAnimations">Crop Animations</span>
         </a>
       </div>
     </div>
@@ -46,12 +63,12 @@
     <header class="farming-header">
       <div class="header-content">
         <div class="farming-title">
-          <h1>🌾 Smart Farming Dashboard</h1>
-          <p>Weather insights simplified for farmers</p>
+          <h1>🌾 <span data-i18n="smartFarmingDashboard">Smart Farming Dashboard</span></h1>
+          <p data-i18n="weatherInsights">Weather insights simplified for farmers</p>
         </div>
         <div class="season-indicator">
           <span class="season-icon">🌱</span>
-          <span class="season-text" id="currentSeason">Loading...</span>
+          <span class="season-text" id="currentSeason" data-i18n="loading">Loading...</span>
         </div>
       </div>
     </header>
@@ -60,14 +77,14 @@
     <section class="farming-controls">
       <div class="controls-grid">
         <div class="control-group location-search-group">
-          <label>📍 Search Your Location</label>
+          <label>📍 <span data-i18n="searchYourLocation">Search Your Location</span></label>
           <div class="location-search-container">
             <div class="search-wrapper">
               <i class="fas fa-search search-icon"></i>
-              <input type="text" id="locationSearch" class="location-search farming-search" placeholder="Search any city, village, or location worldwide..." autocomplete="off">
+              <input type="text" id="locationSearch" class="location-search farming-search" data-i18n="searchPlaceholder" placeholder="Search any city, village, or location worldwide..." autocomplete="off">
               <button id="searchBtn" class="search-btn farming-search-btn" onclick="searchLocation()">
                 <i class="fas fa-globe"></i>
-                <span>Search</span>
+                <span data-i18n="search">Search</span>
               </button>
             </div>
             <!-- Search Results Dropdown -->
@@ -75,24 +92,24 @@
           </div>
         </div>
         <div class="control-group">
-          <label for="cropSelect">🌾 Select Your Crop</label>
+          <label for="cropSelect">🌾 <span data-i18n="selectYourCrop">Select Your Crop</span></label>
           <select id="cropSelect" class="farming-select">
-            <option value="rice">Rice (धान)</option>
-            <option value="wheat">Wheat (गेहूं)</option>
-            <option value="cotton">Cotton (कपास)</option>
-            <option value="sugarcane">Sugarcane (गन्ना)</option>
-            <option value="tomato">Tomato (टमाटर)</option>
-            <option value="onion">Onion (प्याज)</option>
+            <option value="rice" data-i18n="rice">Rice (धान)</option>
+            <option value="wheat" data-i18n="wheat">Wheat (गेहूं)</option>
+            <option value="cotton" data-i18n="cotton">Cotton (कपास)</option>
+            <option value="sugarcane" data-i18n="sugarcane">Sugarcane (गन्ना)</option>
+            <option value="tomato" data-i18n="tomato">Tomato (टमाटर)</option>
+            <option value="onion" data-i18n="onion">Onion (प्याज)</option>
           </select>
         </div>
         <div class="control-group">
-          <label for="stageSelect">🌱 Growth Stage</label>
+          <label for="stageSelect">🌱 <span data-i18n="growthStage">Growth Stage</span></label>
           <select id="stageSelect" class="farming-select">
-            <option value="seedling">Seedling (बीज)</option>
-            <option value="vegetative">Growing (बढ़ना)</option>
-            <option value="flowering">Flowering (फूल)</option>
-            <option value="fruiting">Fruiting (फल)</option>
-            <option value="harvest">Harvest (कटाई)</option>
+            <option value="seedling" data-i18n="seedling">Seedling (बीज)</option>
+            <option value="vegetative" data-i18n="growing">Growing (बढ़ना)</option>
+            <option value="flowering" data-i18n="flowering">Flowering (फूल)</option>
+            <option value="fruiting" data-i18n="fruiting">Fruiting (फल)</option>
+            <option value="harvest" data-i18n="harvest">Harvest (कटाई)</option>
           </select>
         </div>
       </div>
@@ -105,12 +122,12 @@
           <div class="card-icon">🌡️</div>
           <div class="card-content">
             <div class="card-value" id="temperature">--°C</div>
-            <div class="card-label">Temperature</div>
-            <div class="card-status" id="tempStatus">Checking...</div>
+            <div class="card-label" data-i18n="temperature">Temperature</div>
+            <div class="card-status" id="tempStatus" data-i18n="checking">Checking...</div>
             <div class="visual-indicator">
               <div class="temperature-bar" id="tempBar">
                 <div class="temp-fill" id="tempFill"></div>
-                <div class="temp-marker ideal" id="tempIdeal">Ideal</div>
+                <div class="temp-marker ideal" id="tempIdeal" data-i18n="ideal">Ideal</div>
               </div>
             </div>
           </div>
@@ -119,8 +136,8 @@
           <div class="card-icon">💧</div>
           <div class="card-content">
             <div class="card-value" id="humidity">--%</div>
-            <div class="card-label">Humidity</div>
-            <div class="card-status" id="humidityStatus">Checking...</div>
+            <div class="card-label" data-i18n="humidity">Humidity</div>
+            <div class="card-status" id="humidityStatus" data-i18n="checking">Checking...</div>
             <div class="visual-indicator">
               <div class="humidity-circle" id="humidityCircle">
                 <svg width="80" height="80">
@@ -138,8 +155,8 @@
           <div class="card-icon">🌧️</div>
           <div class="card-content">
             <div class="card-value" id="rainfall">-- mm</div>
-            <div class="card-label">Rainfall</div>
-            <div class="card-status" id="rainfallStatus">Checking...</div>
+            <div class="card-label" data-i18n="rainfall">Rainfall</div>
+            <div class="card-status" id="rainfallStatus" data-i18n="checking">Checking...</div>
             <div class="visual-indicator">
               <div class="rainfall-animation" id="rainfallAnimation">
                 <div class="rain-container">
@@ -161,14 +178,14 @@
 
     <!-- Enhanced Weather Information Grid -->
     <section class="enhanced-weather-section">
-      <h2>🌤️ Comprehensive Weather Information</h2>
+      <h2>🌤️ <span data-i18n="comprehensiveWeather">Comprehensive Weather Information</span></h2>
       
       <div class="enhanced-weather-grid">
         <!-- Atmospheric Pressure -->
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #2196f3, #1976d2);">🌡️</div>
-            <h3 class="weather-card-title">Atmospheric Pressure</h3>
+            <h3 class="weather-card-title" data-i18n="atmosphericPressure">Atmospheric Pressure</h3>
           </div>
           <div class="pressure-gauge">
             <svg viewBox="0 0 100 100">
@@ -183,7 +200,7 @@
           </div>
           <div class="pressure-trend" id="pressureTrend">
             <span id="pressureTrendIcon">📊</span>
-            <span id="pressureTrendText">Checking...</span>
+            <span id="pressureTrendText" data-i18n="checking">Checking...</span>
           </div>
         </div>
 
@@ -191,7 +208,7 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #00bcd4, #0097a7);">💨</div>
-            <h3 class="weather-card-title">Wind Conditions</h3>
+            <h3 class="weather-card-title" data-i18n="windConditions">Wind Conditions</h3>
           </div>
           <div class="wind-compass" id="windCompass">
             <div class="compass-directions">
@@ -212,14 +229,14 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #ff9800, #f57c00);">☀️</div>
-            <h3 class="weather-card-title">UV Index</h3>
+            <h3 class="weather-card-title" data-i18n="uvIndex">UV Index</h3>
           </div>
           <div class="uv-meter">
             <div class="uv-value" id="uvValue">--</div>
             <div class="uv-scale">
               <div class="uv-indicator" id="uvIndicator"></div>
             </div>
-            <div class="uv-level" id="uvLevel">Checking...</div>
+            <div class="uv-level" id="uvLevel" data-i18n="checking">Checking...</div>
           </div>
         </div>
 
@@ -227,7 +244,7 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">🌫️</div>
-            <h3 class="weather-card-title">Air Quality</h3>
+            <h3 class="weather-card-title" data-i18n="airQuality">Air Quality</h3>
           </div>
           <div class="air-quality-indicator">
             <div class="aqi-circle">
@@ -241,7 +258,7 @@
                 <div class="label">AQI</div>
               </div>
             </div>
-            <div class="aqi-status" id="aqiStatus">Checking...</div>
+            <div class="aqi-status" id="aqiStatus" data-i18n="checking">Checking...</div>
           </div>
         </div>
 
@@ -249,11 +266,11 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #795548, #5d4037);">🌱</div>
-            <h3 class="weather-card-title">Soil Conditions</h3>
+            <h3 class="weather-card-title" data-i18n="soilConditions">Soil Conditions</h3>
           </div>
           <div class="soil-conditions">
             <div class="soil-metric">
-              <div class="label">Temperature</div>
+              <div class="label" data-i18n="temperature">Temperature</div>
               <div class="value" id="soilTemp">--</div>
               <div class="unit">°C</div>
               <div class="soil-temp-bar">
@@ -261,7 +278,7 @@
               </div>
             </div>
             <div class="soil-metric">
-              <div class="label">Moisture</div>
+              <div class="label" data-i18n="moisture">Moisture</div>
               <div class="value" id="soilMoisture">--</div>
               <div class="unit">%</div>
               <div class="soil-moisture-circle">
@@ -279,11 +296,11 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #7cb342, #558b2f);">📈</div>
-            <h3 class="weather-card-title">Growing Degree Days</h3>
+            <h3 class="weather-card-title" data-i18n="growingDegreeDays">Growing Degree Days</h3>
           </div>
           <div class="gdd-display">
             <div class="gdd-value" id="gddValue">--</div>
-            <div class="gdd-label">Today's GDD</div>
+            <div class="gdd-label" data-i18n="todaysGDD">Today's GDD</div>
             <div class="gdd-progress">
               <div class="gdd-progress-fill" id="gddProgress"></div>
             </div>
@@ -294,11 +311,11 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #f44336, #d32f2f);">🔥</div>
-            <h3 class="weather-card-title">Heat Index</h3>
+            <h3 class="weather-card-title" data-i18n="heatIndex">Heat Index</h3>
           </div>
           <div class="heat-index-display">
             <div class="heat-index-value" id="heatIndexValue">--°C</div>
-            <div class="heat-index-level" id="heatIndexLevel">Checking...</div>
+            <div class="heat-index-level" id="heatIndexLevel" data-i18n="checking">Checking...</div>
           </div>
         </div>
 
@@ -306,7 +323,7 @@
         <div class="enhanced-weather-card">
           <div class="weather-card-header">
             <div class="weather-card-icon" style="background: linear-gradient(135deg, #607d8b, #455a64);">🌙</div>
-            <h3 class="weather-card-title">Moon Phase</h3>
+            <h3 class="weather-card-title" data-i18n="moonPhase">Moon Phase</h3>
           </div>
           <div class="moon-phase-display">
             <span class="moon-icon" id="moonIcon">🌙</span>
@@ -360,8 +377,8 @@
       <div class="overall-condition" id="overallCondition">
         <div class="condition-icon">⏳</div>
         <div class="condition-text">
-          <h3>Loading your farming conditions...</h3>
-          <p>Please wait while we analyze the weather</p>
+          <h3 data-i18n="loadingFarmingConditions">Loading your farming conditions...</h3>
+          <p data-i18n="pleaseWaitAnalyzeWeather">Please wait while we analyze the weather</p>
         </div>
       </div>
 
@@ -377,8 +394,8 @@
       <div class="irrigation-card" id="irrigationCard">
         <div class="irrigation-icon">💦</div>
         <div class="irrigation-content">
-          <h3>Loading irrigation advice...</h3>
-          <p>Calculating water requirements...</p>
+          <h3 data-i18n="loadingIrrigationAdvice">Loading irrigation advice...</h3>
+          <p data-i18n="calculatingWaterRequirements">Calculating water requirements...</p>
         </div>
       </div>
     </section>
@@ -407,7 +424,7 @@
         <h2>🤖 AI Farming Agents</h2>
         <div class="ai-controls">
           <div class="farm-size-input">
-            <label for="farmSizeInput">Farm Size (hectares):</label>
+            <label for="farmSizeInput" data-i18n="farmSizeHectares">Farm Size (hectares):</label>
             <input type="number" id="farmSizeInput" value="1" min="0.1" max="1000" step="0.1" class="farming-input">
           </div>
           <button id="runAIAnalysis" class="ai-analysis-btn" onclick="loadAIAnalysis()">
@@ -421,14 +438,14 @@
       <div class="ai-analysis-container" id="aiAnalysisContainer">
         <div class="ai-placeholder">
           <div class="ai-placeholder-icon">🤖</div>
-          <h3>AI Analysis Ready</h3>
+          <h3 data-i18n="aiAnalysisReady">AI Analysis Ready</h3>
           <p>Click "Run AI Analysis" to get comprehensive insights from our farming AI agents including:</p>
           <ul>
-            <li>🌱 <strong>Crop Advisory Agent</strong> - Personalized crop recommendations</li>
-            <li>🌤️ <strong>Weather Prediction Agent</strong> - Advanced weather analysis</li>
-            <li>💰 <strong>Market Intelligence Agent</strong> - Price trends and market insights</li>
-            <li>💧 <strong>Resource Optimization Agent</strong> - Water and fertilizer optimization</li>
-            <li>⚠️ <strong>Risk Assessment Agent</strong> - Pest, disease, and climate risk analysis</li>
+            <li>🌱 <strong data-i18n="cropAdvisoryAgent">Crop Advisory Agent</strong> - <span data-i18n="personalizedCropRecommendations">Personalized crop recommendations</span></li>
+            <li>🌤️ <strong data-i18n="weatherPredictionAgent">Weather Prediction Agent</strong> - <span data-i18n="advancedWeatherAnalysis">Advanced weather analysis</span></li>
+            <li>💰 <strong data-i18n="marketIntelligenceAgent">Market Intelligence Agent</strong> - <span data-i18n="priceTrendsMarketInsights">Price trends and market insights</span></li>
+            <li>💧 <strong data-i18n="resourceOptimizationAgent">Resource Optimization Agent</strong> - <span data-i18n="waterFertilizerOptimization">Water and fertilizer optimization</span></li>
+            <li>⚠️ <strong data-i18n="riskAssessmentAgent">Risk Assessment Agent</strong> - <span data-i18n="pestDiseaseClimateRiskAnalysis">Pest, disease, and climate risk analysis</span></li>
           </ul>
         </div>
       </div>
@@ -446,7 +463,7 @@
           </button>
           <button class="animation-toggle-btn" id="cropAnimationToggle" onclick="toggleCropAnimation()">
             <i class="fas fa-play"></i>
-            <span id="animationToggleText">Start Animation</span>
+            <span id="animationToggleText" data-i18n="startAnimation">Start Animation</span>
           </button>
         </div>
       </div>
@@ -498,11 +515,11 @@
       <div class="actions-grid">
         <button class="action-btn" onclick="window.open('farmer-profit-dashboard.html', '_blank')">
           <i class="fas fa-calculator"></i>
-          <span>Profit Calculator</span>
+          <span data-i18n="profitCalculator">Profit Calculator</span>
         </button>
         <button class="action-btn" onclick="refreshFarmingData()">
           <i class="fas fa-sync-alt"></i>
-          <span>Refresh Data</span>
+          <span data-i18n="refreshData">Refresh Data</span>
         </button>
         <button class="action-btn" onclick="showWeatherForecast()">
           <i class="fas fa-calendar-week"></i>
@@ -510,23 +527,23 @@
         </button>
         <button class="action-btn" onclick="showCropCalendar()">
           <i class="fas fa-calendar-alt"></i>
-          <span>Crop Calendar</span>
+          <span data-i18n="cropCalendar">Crop Calendar</span>
         </button>
         <button class="action-btn" onclick="showExpertTips()">
           <i class="fas fa-lightbulb"></i>
-          <span>Expert Tips</span>
+          <span data-i18n="expertTips">Expert Tips</span>
         </button>
         <button class="action-btn" onclick="testComprehensiveWeatherManual()" style="background: #ff4444; color: white;">
           <i class="fas fa-bug"></i>
-          <span>TEST Weather</span>
+          <span data-i18n="testWeather">TEST Weather</span>
         </button>
         <button class="action-btn" onclick="manualTestDashboard()" style="background: #4444ff; color: white;">
           <i class="fas fa-cog"></i>
-          <span>TEST Dashboard</span>
+          <span data-i18n="testDashboard">TEST Dashboard</span>
         </button>
         <button class="action-btn" onclick="forceUpdateDashboard()" style="background: #9c27b0; color: white;">
           <i class="fas fa-bolt"></i>
-          <span>FORCE Update</span>
+          <span data-i18n="forceUpdate">FORCE Update</span>
         </button>
       </div>
     </section>
@@ -539,7 +556,7 @@
       <div class="spinner-ring"></div>
       <div class="spinner-ring"></div>
     </div>
-    <p class="loading-text">Loading farming insights...</p>
+    <p class="loading-text" data-i18n="loadingFarmingInsights">Loading farming insights...</p>
   </div>
 
   <!-- Modals -->
@@ -547,21 +564,39 @@
     <div class="modal-content">
       <span class="modal-close" onclick="closeModal('forecastModal')">&times;</span>
       <h2>7-Day Weather Forecast</h2>
-      <div id="forecastContent">Coming soon...</div>
+      <div id="forecastContent" data-i18n="comingSoon">Coming soon...</div>
     </div>
   </div>
 
   <div class="modal" id="calendarModal">
     <div class="modal-content">
       <span class="modal-close" onclick="closeModal('calendarModal')">&times;</span>
-      <h2>Seasonal Crop Calendar</h2>
-      <div id="calendarContent">Loading calendar...</div>
+      <h2 data-i18n="seasonalCropCalendar">Seasonal Crop Calendar</h2>
+      <div id="calendarContent" data-i18n="loadingCalendar">Loading calendar...</div>
     </div>
   </div>
 
   <script src="farming.js"></script>
   <script src="crop-growth-animator.js"></script>
+  <script src="languages.js"></script>
   <script>
+    // Language change function
+    function changeLanguage() {
+      const select = document.getElementById('languageSelect');
+      const selectedLang = select.value;
+      setLanguage(selectedLang);
+      // Dispatch custom event for other scripts to react
+      document.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: selectedLang } }));
+    }
+    
+    // Set language selector to current language on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const currentLang = getCurrentLanguage();
+      document.getElementById('languageSelect').value = currentLang;
+      // Update language on page load
+      updateLanguage(currentLang);
+    });
+    
     // Integration functions for crop animation with farming dashboard
     let isAnimationActive = false;
     

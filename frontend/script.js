@@ -1,5 +1,32 @@
 const socket = io('http://localhost:4002');
 
+// Translate weather condition to support multilingual
+function translateWeatherCondition(condition) {
+  const currentLang = getCurrentLanguage();
+  
+  // Use the main translations object for weather conditions
+  const conditionKey = condition.toLowerCase().replace(/\s+/g, '');
+  const translationKey = conditionKey + 'Condition';
+  
+  // Check if we have a translation for this condition
+  if (translations[currentLang] && translations[currentLang][translationKey]) {
+    return translations[currentLang][translationKey];
+  }
+  
+  // Fallback to English
+  if (translations.en && translations.en[translationKey]) {
+    return translations.en[translationKey];
+  }
+  
+  // If no translation found, return original condition
+  return condition;
+}
+
+// Translate text function for dynamic content
+function translateText(key) {
+  return window.translateText ? window.translateText(key) : key;
+}
+
 // Global variables - no longer using citySelect since it's removed
 let currentCity = 'Delhi'; // Default city
 let lastFetchTime = 0;
@@ -68,7 +95,7 @@ async function fetchCurrentWeather(city) {
           temperature: parseFloat(data.main.temp).toFixed(1),
           humidity: Math.round(data.main.humidity),
           rainfall: parseFloat(data.rain?.['1h'] || 0).toFixed(1),
-          weather_description: data.weather[0]?.description || 'Unknown'
+          weather_description: translateWeatherCondition(data.weather[0]?.description || 'Unknown')
         };
         
         updateWeatherDisplay(weatherDisplay);
@@ -119,11 +146,22 @@ function showLoading() {
         // Update loading text animations
         const loadingText = document.querySelector('.loading-text');
         if (loadingText) {
-            const messages = [
-                'Connecting to Weather Station...',
-                'Processing Climate Information...',
-                'Almost Ready...'
-            ];
+            const currentLang = getCurrentLanguage();
+            const translations = {
+                en: ['Connecting to Weather Station...', 'Processing Climate Information...', 'Almost Ready...'],
+                hi: ['मौसम स्टेशन से कनेक्ट कर रहा है...', 'जलवायु जानकारी संसाधित कर रहा है...', 'लगभग तैयार...'],
+                ta: ['வானிலை நிலையத்துடன் இணைக்கிறது...', 'காலநிலை தகவல்களை செயலாக்குகிறது...', 'கிட்டத்ட தயார்...'],
+                te: ['వాతావరణ స్టేషన్‌కు కనెక్ట్ అవుతోంది...', 'వాతావరణ సమాచారాన్ని ప్రాసెస్ చేస్తోంది...', 'దాదాపు సిద్ధం...'],
+                mr: ['हवामान स्टेशनशी कनेक्ट करत आहे...', 'हवामान माहिती प्रक्रिया करत आहे...', 'जवळजवळ तयार...'],
+                bn: ['আবহাওয়া স্টেশনের সাথে সংযোগ করা হচ্ছে...', 'জলবায়ু তথ্য প্রক্রিয়াকরণ...', 'প্রায় প্রস্তুত...'],
+                gu: ['હવામાન સ્ટેશન સાથે કનેક્ટ કરી રહ્યું છે...', 'હવામાન માહિતી પ્રક્રિયા કરી રહ્યું છે...', 'લગભગ તૈયાર...'],
+                kn: ['ಹವಾಮಾನ ಕೇಂದ್ರದೊಂದಿಗೆ ಸಂಪರ್ಕ ಸಾದಿಸಲಾಗುತ್ತಿದೆ...', 'ಹವಾಮಾನ ಮಾಹಿತಿಯನ್ನು ಪ್ರಕ್ರಿಯಿಸಲಾಗುತ್ತಿದೆ...', 'ಬಹುಶಃ ಸಿದ್ಧವಾಗಿದೆ...'],
+                ml: ['കാലാവസ്ഥ സ്റ്റേഷനുമായി ബന്ധിപ്പിക്കുന്നു...', 'കാലാവസ്ഥ വിവരങ്ങൾ പ്രോസസ്സ് ചെയ്യുന്നു...', 'ഏതാണ്ട് തയ്യാറായി...'],
+                pa: ['ਮੌਸਮ ਸਟੇਸ਼ਨ ਨਾਲ ਕਨੈਕਟ ਕਰ ਰਿਹਾ ਹੈ...', 'ਮੌਸਮ ਜਾਣਕਾਰੀ ਦੀ ਪ੍ਰੋਸੈਸਿੰਗ...', 'ਲਗਭਗ ਤਿਆਰ...'],
+                ur: ['موسم کی اسٹیشن سے رابطہ قائم کر رہا ہے...', 'آب و ہوا کی معلومات پروسیسنگ...', 'تقریباً تیار...']
+            };
+            
+            const messages = translations[currentLang] || translations.en;
             
             let messageIndex = 0;
             const messageInterval = setInterval(() => {
@@ -140,6 +178,12 @@ function showLoading() {
     setTimeout(() => {
         initializeInstantWeatherUI();
     }, 100);
+    
+    // Add a safety timeout to ensure loading overlay is hidden even if there are errors
+    setTimeout(() => {
+        hideLoading();
+        restoreNormalOpacity();
+    }, 10000); // Hide after 10 seconds as a safety fallback
 }
 
 // Instant UI initialization with sample weather data
@@ -164,8 +208,8 @@ function showInstantSampleWeather() {
         temperature: 24.5,
         humidity: 65,
         rainfall: 0.8,
-        weather_description: 'Partly Cloudy',
-        data_source: 'Initializing...',
+        weather_description: translateWeatherCondition('Partly Cloudy'),
+        data_source: translateText('Initializing...'),
         recorded_at: new Date().toISOString()
     };
     
@@ -179,16 +223,16 @@ function showInstantSampleWeather() {
 function loadRealWeatherDataProgressively() {
     console.log('🔄 Loading real weather data progressively...');
     
-    // Set timeout for real data loading (3 seconds max)
+    // Set timeout for real data loading (5 seconds max)
     const loadTimeout = setTimeout(() => {
         console.log('⚠️ Weather data loading timeout, keeping sample data');
         restoreNormalOpacity();
-    }, 3000);
+    }, 5000);
     
     // Try to load real weather data
     Promise.race([
         fetchCurrentWeatherQuiet(currentCity),
-        new Promise(resolve => setTimeout(() => resolve(null), 3000))
+        new Promise(resolve => setTimeout(() => resolve(null), 5000))
     ])
     .then(result => {
         clearTimeout(loadTimeout);
@@ -295,7 +339,7 @@ function updateWeatherDisplayInstant(data) {
     animateValueChangeInstant('temp', `${parseFloat(temp).toFixed(1)}°C`);
     animateValueChangeInstant('humidity', `${Math.round(humidity)}%`);
     animateValueChangeInstant('rain', `${parseFloat(rainfall || 0).toFixed(1)} mm`);
-    animateValueChangeInstant('desc', description || 'Unknown');
+    animateValueChangeInstant('desc', description || translateText('Unknown'));
     
     // Update humidity progress ring
     updateHumidityProgress(Math.round(humidity));
@@ -340,35 +384,30 @@ function animateValueChangeInstant(elementId, newValue) {
     }, 100);
 }
 
-// Restore normal opacity after real data loads
-function restoreNormalOpacity() {
-    const elements = ['temp', 'humidity', 'rain', 'desc'];
-    elements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.style.opacity = '1';
-            element.title = '';
-        }
-    });
-}
-
-// Hide loading overlay with smooth transition
+// Function to hide loading overlay
 function hideLoading() {
     const overlay = document.getElementById('loadingOverlay');
-    if (!overlay) return;
-    
-    const messageInterval = overlay.dataset.messageInterval;
-    
-    if (messageInterval) {
-        clearInterval(parseInt(messageInterval));
+    if (overlay) {
+        overlay.classList.remove('show');
+        
+        // Clear any existing message intervals
+        if (overlay.dataset.messageInterval) {
+            clearInterval(parseInt(overlay.dataset.messageInterval));
+            delete overlay.dataset.messageInterval;
+        }
     }
     
-    // Smooth fade out
-    overlay.style.opacity = '0';
-    setTimeout(() => {
-        overlay.classList.remove('show');
-        overlay.style.opacity = '1'; // Reset for next time
-    }, 400);
+    // Restore normal opacity for content
+    restoreNormalOpacity();
+}
+
+// Function to restore normal opacity for content
+function restoreNormalOpacity() {
+    const container = document.querySelector('.container');
+    if (container) {
+        container.style.opacity = '1';
+        container.style.pointerEvents = 'auto';
+    }
 }
 
 // Update the weather display with animations
@@ -803,8 +842,8 @@ window.addEventListener('offline', () => {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 ClimateSync Weather Dashboard starting with instant loading...');
     
-    // Start instant loading immediately
-    showLoading();
+    // Initialize background app setup (runs while sample data is shown)
+    initializeAppInBackground();
     
     // Show forecast and agricultural sections by default
     document.getElementById('forecastSection').style.display = 'block';
@@ -812,9 +851,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Log current city for debugging
     console.log('Current city on load:', currentCity);
-    
-    // Initialize background app setup (runs while sample data is shown)
-    initializeAppInBackground();
     
     // Add smooth scroll behavior
     document.documentElement.style.scrollBehavior = 'smooth';
@@ -830,6 +866,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+    
+    // Start instant loading after a brief delay to ensure DOM is fully ready
+    setTimeout(() => {
+        showLoading();
+    }, 100);
 });
 
 // Initialize app in background while instant UI is shown

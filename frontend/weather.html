@@ -136,10 +136,134 @@
             margin-top: 1rem;
             font-size: 0.9rem;
         }
+
+        /* Search container */
+        .search-container {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto 3rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #ddd;
+            border-radius: 50px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #007bff;
+        }
+
+        .search-button {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .search-button:hover {
+            background: #0056b3;
+        }
+
+        /* Search results */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            display: none;
+        }
+
+        .search-results-header {
+            padding: 1rem;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            background: #f8f9fa;
+        }
+
+        .search-result-item {
+            padding: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            border-bottom: 1px solid #eee;
+        }
+
+        .search-result-item:hover {
+            background: #e9f0ff;
+        }
+
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-main strong {
+            color: #333;
+        }
+
+        .result-country {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .result-details {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .result-coords {
+            color: #999;
+            font-size: 0.8rem;
+            font-family: monospace;
+        }
+
+        .search-error {
+            padding: 1rem;
+            color: #dc3545;
+            text-align: center;
+            background: #f8d7da;
+            border-radius: 0 0 15px 15px;
+        }
+
+        /* Add spacing to prevent overlap */
+        .search-spacing {
+            margin-bottom: 15rem;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard">
+        <div class="search-container">
+            <input type="text" id="locationSearch" class="search-input" placeholder="Search for a city or location...">
+            <button id="searchBtn" class="search-button">Search</button>
+            <div id="searchResults" class="search-results"></div>
+        </div>
+
         <div class="city-select">
             <a href="javascript:void(0)" class="city-button" onclick="getWeather('Delhi')">Delhi</a>
             <a href="javascript:void(0)" class="city-button" onclick="getWeather('Mumbai')">Mumbai</a>
@@ -183,6 +307,217 @@
     </div>
 
     <script>
+        // Global variables
+        let searchTimeout = null;
+        let currentSearchData = null;
+
+        // Add event listeners when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Search button click event
+            document.getElementById('searchBtn').addEventListener('click', function() {
+                const query = document.getElementById('locationSearch').value.trim();
+                if (query) {
+                    performLocationSearch(query);
+                }
+            });
+
+            // Enter key in search input
+            document.getElementById('locationSearch').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const query = document.getElementById('locationSearch').value.trim();
+                    if (query) {
+                        performLocationSearch(query);
+                    }
+                }
+            });
+
+            // Auto-complete search as user types
+            document.getElementById('locationSearch').addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+                
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+                
+                if (query.length < 2) {
+                    document.getElementById('searchResults').style.display = 'none';
+                    removeSearchSpacing();
+                    return;
+                }
+                
+                searchTimeout = setTimeout(() => {
+                    performLocationSearchQuiet(query);
+                }, 800);
+            });
+
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(e) {
+                const searchContainer = document.querySelector('.search-container');
+                if (searchContainer && !searchContainer.contains(e.target)) {
+                    document.getElementById('searchResults').style.display = 'none';
+                    removeSearchSpacing();
+                }
+            });
+
+            // Initialize with default city
+            getWeather('Delhi');
+        });
+
+        // Perform location search with API
+        async function performLocationSearch(query) {
+            try {
+                console.log('Searching for location:', query);
+                
+                const response = await fetch(`/api/weather/search/${encodeURIComponent(query)}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success && result.results && result.results.length > 0) {
+                    displaySearchResults(result.results);
+                } else if (result.success && result.data && result.data.length > 0) {
+                    displaySearchResults(result.data);
+                } else {
+                    showSearchError('No locations found');
+                }
+            } catch (error) {
+                console.error('Error searching location:', error);
+                showSearchError('Failed to search location');
+            }
+        }
+
+        // Quiet search for auto-complete
+        async function performLocationSearchQuiet(query) {
+            try {
+                console.log('Auto-searching for location:', query);
+                
+                const response = await fetch(`/api/weather/search/${encodeURIComponent(query)}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success && result.results && result.results.length > 0) {
+                    displaySearchResults(result.results);
+                } else if (result.success && result.data && result.data.length > 0) {
+                    displaySearchResults(result.data);
+                } else {
+                    showSearchError('No locations found');
+                }
+            } catch (error) {
+                console.error('Error searching location:', error);
+                showSearchError('Failed to search location');
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(locations) {
+            const resultsContainer = document.getElementById('searchResults');
+            
+            if (!locations || locations.length === 0) {
+                showSearchError('No locations found');
+                return;
+            }
+            
+            let html = `<div class="search-results-header">Found ${locations.length} locations</div>`;
+            
+            locations.forEach((location, index) => {
+                const country = location.country || 'Unknown';
+                const state = location.admin1 || location.state || '';
+                const region = location.admin2 || location.admin3 || '';
+                const population = location.population ? `${(location.population / 1000).toFixed(0)}K people` : '';
+                
+                let locationDescription = '';
+                if (state && region) {
+                    locationDescription = `${state} • ${region}`;
+                } else if (state) {
+                    locationDescription = state;
+                } else if (region) {
+                    locationDescription = region;
+                }
+                
+                html += `
+                    <div class="search-result-item" onclick="selectSearchLocation(${index})">
+                        <div class="result-main">
+                            <strong>${location.name}</strong>
+                            <span class="result-country">${country}</span>
+                        </div>
+                        <div class="result-details">
+                            ${locationDescription ? `${locationDescription} • ` : ''}${population}
+                            <span class="result-coords">📍 ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsContainer.innerHTML = html;
+            resultsContainer.style.display = 'block';
+            
+            // Add spacing to prevent overlap
+            addSearchSpacing();
+            
+            currentSearchData = locations;
+            console.log('Displayed', locations.length, 'search results');
+        }
+
+        // Select a location from search results
+        async function selectSearchLocation(index) {
+            if (!currentSearchData || !currentSearchData[index]) {
+                console.error('No search data available for index:', index);
+                return;
+            }
+            
+            const location = currentSearchData[index];
+            console.log('Selected location:', location);
+            
+            // Hide search results
+            document.getElementById('searchResults').style.display = 'none';
+            
+            // Remove spacing adjustment
+            removeSearchSpacing();
+            
+            // Update search input to show selected location
+            const searchInput = document.getElementById('locationSearch');
+            if (searchInput) {
+                searchInput.value = `${location.name}, ${location.country || ''}`;
+            }
+            
+            console.log('Location changed to:', location.name);
+            
+            // Fetch weather data for the selected location
+            await getWeather(location.name);
+        }
+        
+        // Add spacing to prevent search results from overlapping with content below
+        function addSearchSpacing() {
+            const dashboard = document.querySelector('.dashboard');
+            dashboard.classList.add('search-spacing');
+        }
+        
+        // Remove spacing when search results are hidden
+        function removeSearchSpacing() {
+            const dashboard = document.querySelector('.dashboard');
+            dashboard.classList.remove('search-spacing');
+        }
+        
+        // Show search error
+        function showSearchError(message) {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = `<div class="search-error">${message}</div>`;
+            resultsContainer.style.display = 'block';
+            
+            // Add spacing to prevent overlap
+            addSearchSpacing();
+            
+            console.log('Search error:', message);
+        }
+
+        // Original getWeather function
         async function getWeather(city) {
             try {
                 const response = await fetch(`/api/weather/latest/${city}`);
